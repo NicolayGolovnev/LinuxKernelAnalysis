@@ -5,6 +5,7 @@ import java.util.*;
 
 import static ru.altstu.linuxkernelanalysis.Main.sortByValue;
 
+@Deprecated
 public class LevensteinMsgMatcher implements IMsgMatcher {
 
     List<String> messages = new LinkedList<String>();

@@ -3,6 +3,7 @@ package ru.altstu.linuxkernelanalysis;
 /**
  * Created by sergey on 31/03/2017.
  */
+@Deprecated
 public class KeyFilePos {
     public String fileName;
     public Integer position;

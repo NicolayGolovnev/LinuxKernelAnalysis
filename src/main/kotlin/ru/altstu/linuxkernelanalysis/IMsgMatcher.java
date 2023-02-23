@@ -1,5 +1,6 @@
 package ru.altstu.linuxkernelanalysis;
 
+@Deprecated
 public interface IMsgMatcher {
     String closestMessage(String newMsg);
 
