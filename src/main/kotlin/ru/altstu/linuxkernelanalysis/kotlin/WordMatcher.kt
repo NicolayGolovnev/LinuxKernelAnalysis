@@ -25,7 +25,7 @@ class WordMatcher(useTfIdf:Boolean): MessageMatcher {
 
     override fun addNewMessage(newMessage: String) {
         val props = Properties()
-        props.setProperty("annotators", "tokenize, ssplit")
+        props.setProperty("annotators", "tokenize, ssplit, pos, lemma")
         val pipeline = StanfordCoreNLP(props)
         val document = pipeline.process(newMessage)
         val sentences = document.get(CoreAnnotations.SentencesAnnotation::class.java)
@@ -33,7 +33,8 @@ class WordMatcher(useTfIdf:Boolean): MessageMatcher {
             val tokens = sentence.get(CoreAnnotations.TokensAnnotation::class.java)
             for (token in tokens) {
                 val word = token.get(CoreAnnotations.TextAnnotation::class.java)
-                println(word)
+                val lemma = token.get(CoreAnnotations.LemmaAnnotation::class.java)
+                println("$word - $lemma")
             }
         }
 

@@ -1,8 +1,7 @@
 package ru.altstu.linuxkernelanalysis
+import ru.altstu.linuxkernelanalysis.kotlin.WordMatcher
+fun main(args: Array<String>) {
+    val boopa = WordMatcher(true)
 
-class Main {
-    @Throws(Exception::class)
-    fun main(args: Array<String>) {
-        println("boopa")
-    }
+    println(boopa.addNewMessage("fixed fix boopa booping fixing fixes this me my them"))
 }
