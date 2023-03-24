@@ -1,10 +1,9 @@
 package ru.altstu.linuxkernelanalysis.kotlin
 
-import ru.altstu.linuxkernelanalysis.KeyFilePos
 
 class KeyFilePos(
-    val fileName: String?,
-    val position: Int?
+    val fileName: String,
+    val position: Int
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

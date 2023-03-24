@@ -1,5 +1,7 @@
 package ru.altstu.linuxkernelanalysis.kotlin
 
+import edu.stanford.nlp.ling.CoreAnnotations
+import edu.stanford.nlp.pipeline.StanfordCoreNLP
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
@@ -8,73 +10,62 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicIntegerArray
 
 // TODO: нужен рефактор после генерации
-class WordMatcher : MessageMatcher {
+class WordMatcher(useTfIdf:Boolean): MessageMatcher {
 
-    var engWords = HashMap<String, String>()
-    var uniqueWords: MutableList<String?>? = null
+    var uniqueWords: MutableList<String> = ArrayList()
     var weights: AtomicIntegerArray? = null
     var messages: MutableList<String> = ArrayList()
     var features: MutableList<HashMap<Int, Double>> = ArrayList()
     var sizes: MutableList<Double> = ArrayList()
-    private val tfidf = true
+    private val tfidf = useTfIdf
 
-    @Throws(Exception::class)
-    fun WordMsgMatcher() {
-        loadWords()
-    }
-
-    @Throws(Exception::class)
-    private fun loadWords() {
-        val file = File("English-Morph.txt")
-        val fr = FileReader(file)
-        val br = BufferedReader(fr)
-        var line: String
-        while (br.readLine().also { line = it } != null) {
-            val cols = line.split("\t".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            if (cols.size > 1) {
-                engWords[cols[0]] = cols[1]
-            }
-        }
-        fr.close()
-        // prepare the list of all words
-        uniqueWords = ArrayList(engWords.size)
-    }
 
     override fun closestMessage(newMessage: String): String  =
         throw RuntimeException("Не используется тут")
 
     override fun addNewMessage(newMessage: String) {
-        var newMsg = newMessage
-        newMsg = newMsg.lowercase(Locale.getDefault()).trim { it <= ' ' }
-        val words = newMsg.split("[ !\"\\#$%&'()*+,-./:;<=>?@\\[\\]^_`{|}~]+".toRegex()).dropLastWhile { it.isEmpty() }
-            .toTypedArray()
-        val feature = HashMap<Int, Double>()
-        var sz = 0.0
-        for (word in words) if (word.trim { it <= ' ' } !== "") {
-            var rightWord: String? = word
-            if (engWords.containsKey(word)) {
-                // we have this word in the English dict
-                rightWord = engWords[word]
+        val props = Properties()
+        props.setProperty("annotators", "tokenize, ssplit")
+        val pipeline = StanfordCoreNLP(props)
+        val document = pipeline.process(newMessage)
+        val sentences = document.get(CoreAnnotations.SentencesAnnotation::class.java)
+        for (sentence in sentences) {
+            val tokens = sentence.get(CoreAnnotations.TokensAnnotation::class.java)
+            for (token in tokens) {
+                val word = token.get(CoreAnnotations.TextAnnotation::class.java)
+                println(word)
             }
-            // add a word to the all words collection
-            if (!uniqueWords!!.contains(rightWord)) {
-                uniqueWords!!.add(rightWord)
-            }
-            val pos = uniqueWords!!.indexOf(rightWord) // number of word in the list of all words
-            feature[pos] = 1.0
-            sz += 1.0
         }
-        if (sz > 0 && !messages.contains(newMsg)) {
-            messages.add(newMsg)
-            features.add(feature)
-            sizes.add(Math.sqrt(sz))
-        }
+
+        //val newMsg = newMessage.lowercase(Locale.getDefault()).trim {it <= ' '}
+        //val words = newMsg.split("[ !\"\\#$%&'()*+,-./:;<=>?@\\[\\]^_`{|}~]+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        //val feature = HashMap<Int, Double>()
+        //var sz = 0.0
+        //for (word in words) if (word.trim { it <= ' ' } !== "") {
+        //    var rightWord: String? = word
+        //    if (engWords.containsKey(word)) {
+        //        // we have this word in the English dict
+        //        rightWord = engWords[word]
+        //    }
+        //    // add a word to the all words collection
+        //    if (!uniqueWords!!.contains(rightWord)) {
+        //        uniqueWords!!.add(rightWord)
+        //    }
+        //    val pos = uniqueWords!!.indexOf(rightWord) // number of word in the list of all words
+        //    feature[pos] = 1.0
+        //    sz += 1.0
+        //}
+        //if (sz > 0 && !messages.contains(newMsg)) {
+        //    messages.add(newMsg)
+        //    features.add(feature)
+        //    sizes.add(Math.sqrt(sz))
+        //}
     }
 
     @Throws(InterruptedException::class)
     override fun buildMessageDistances() {
         if (tfidf) {
-            val d = uniqueWords!!.size
+            val d = uniqueWords.size
             // calculate idfs
             val idfs = DoubleArray(d)
             for (w in 0 until d) {
@@ -97,6 +88,8 @@ class WordMatcher : MessageMatcher {
                 sizes[f++] = Math.sqrt(newSz)
             }
         }
+
+
         println("calculating distances...")
         weights = AtomicIntegerArray(messages.size) //for each message we will store its weight
         val ws = Any()

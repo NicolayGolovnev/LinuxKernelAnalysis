@@ -6,7 +6,7 @@ import java.util.stream.Collectors
 object SortUtil {
     // Sorts a map by the value (desc)
     // TODO: посмотреть, как можно сделать по-котлину
-    fun Map<String, Int>.sortByDescValue(): MutableMap<String, Int> =
+    fun MutableMap<String, Int>.sortByDescValue(): MutableMap<String, Int> =
         this.entries
             .stream()
             // ReverseComparator -> c2.compareTo(c1)
