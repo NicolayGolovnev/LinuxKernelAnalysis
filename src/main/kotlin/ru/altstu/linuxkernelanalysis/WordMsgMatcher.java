@@ -5,7 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.*;
 
-
+@Deprecated
 public class WordMsgMatcher implements IMsgMatcher {
 
     HashMap<String, String> engWords = new HashMap<>();

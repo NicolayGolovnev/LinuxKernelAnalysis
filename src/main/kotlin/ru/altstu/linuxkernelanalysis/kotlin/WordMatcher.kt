@@ -4,37 +4,40 @@ import edu.stanford.nlp.ling.CoreAnnotations
 import edu.stanford.nlp.pipeline.StanfordCoreNLP
 import java.lang.RuntimeException
 import java.util.*
-import java.util.concurrent.atomic.AtomicIntegerArray
 import kotlin.collections.HashMap
+import kotlin.math.sqrt
 
-// TODO: нужен рефактор после генерации
+// TODO: нужно смотреть (отрабатывает не так, как нужно)
 class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
-    data class TokenInforamtion(var word:String, var Count: Int, var AvgTF: Double, var DocumentCount: Int) {
-        val SummOfTF: Double
-            get() = AvgTF * DocumentCount
+    data class TokenInfo(
+        var word: String,
+        var count: Int,
+        var avgTF: Double,
+        var documentCount: Int
+    ) {
+        val sumOfTF: Double
+            get() = avgTF * documentCount
     }
 
-    class MessangeInfo{
-        var words =  HashMap<TokenInforamtion, Int>()
+    class MessageInfo{
+        var words: MutableMap<TokenInfo, Int> = hashMapOf()
         var weight = 0.0
     }
 
+    private var messages: MutableList<String> = arrayListOf()
 
-    var messages: MutableList<String> = ArrayList()
 
+    private val tfIdf = useTfIdf
+    private val posFilter: Array<String> = arrayOf("SYM", "RP", "CC", "DT", "HYPH", ",", ".", ";")
 
-    private val TfIdf = useTfIdf
-    private val PosFlter = arrayOf("SYM", "RP", "CC", "DT", "HYPH", ",", ".", ";")
-
-    private val WordCommonInforamtion = HashMap<String, TokenInforamtion>()
-    private val MessangeInforamtion : MutableList<MessangeInfo> = mutableListOf()
+    private val wordCommonInfo = HashMap<String, TokenInfo>()
+    private val messagesInfo : MutableList<MessageInfo> = mutableListOf()
     private val neighborsDistance = 0.7
 
-    private var DocumentCount = 0
+    private var documentCount = 0
 
     override fun closestMessage(newMessage: String): String =
         throw RuntimeException("Не используется тут")
-
 
     override fun addNewMessage(newMessage: String) {
         val props = Properties()
@@ -43,48 +46,54 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
         val document = pipeline.process(newMessage)
         val sentences = document.get(CoreAnnotations.SentencesAnnotation::class.java)
 
-        val words = sentences.map { sentence ->
-            sentence.get(CoreAnnotations.TokensAnnotation::class.java)
-        }.flatten().filter { token -> token.get(CoreAnnotations.PartOfSpeechAnnotation::class.java) !in this.PosFlter }
-            .map { token -> token.get(CoreAnnotations.LemmaAnnotation::class.java) }
+        val words = sentences
+            .map { it.get(CoreAnnotations.TokensAnnotation::class.java) }
+            .flatten()
+            .filter { it.get(CoreAnnotations.PartOfSpeechAnnotation::class.java) !in this.posFilter }
+            .map { it.get(CoreAnnotations.LemmaAnnotation::class.java) }
 
-        val localWordCount = words.distinct().associateWith { word -> words.count { w -> w == word } }
-        DocumentCount++
+        val localWordCount = words.distinct().associateWith { word -> words.count { it == word } }
+        documentCount++
 
-
-        MessangeInforamtion.add(MessangeInfo())
         for ((word, count) in localWordCount) {
-            if (WordCommonInforamtion.contains(word)) {
-                WordCommonInforamtion[word]!!.Count += count
-                WordCommonInforamtion[word]!!.AvgTF += (WordCommonInforamtion[word]!!.SummOfTF + count.toDouble() / words.size) /
-                        (WordCommonInforamtion[word]!!.DocumentCount + 1)
-                WordCommonInforamtion[word]!!.DocumentCount++
+            if (wordCommonInfo.contains(word)) {
+                wordCommonInfo[word]?.let {
+                    it.count += count
+                    it.avgTF += (it.sumOfTF + count.toDouble() / words.size) / (it.documentCount + 1)
+                    it.documentCount++
+                }
             } else {
-                WordCommonInforamtion[word] = TokenInforamtion(word,count,count.toDouble()/words.size, 1)
+                wordCommonInfo[word] = TokenInfo(
+                    word = word,
+                    count = count,
+                    avgTF = count.toDouble()/words.size,
+                    documentCount = 1
+                )
             }
-            MessangeInforamtion.last().words[WordCommonInforamtion[word]!!] = count
+            messagesInfo.add(
+                MessageInfo().apply {
+                    this.words[wordCommonInfo[word]!!] = count
+                }
+            )
         }
     }
-    fun countDistance(messange1: HashMap<TokenInforamtion, Int>, messange2: HashMap<TokenInforamtion, Int>):Double{
-        val compareWords = messange1 + messange2
+    fun countDistance(firstMsg: MutableMap<TokenInfo, Int>, secondMsg: MutableMap<TokenInfo, Int>): Double {
+        val compareWords = firstMsg + secondMsg
         var diff = 0.0
 
-        for ((word, count) in compareWords) {
-            val p1 = if (messange1.containsKey(word)) 1.0 else 0.0
-            val p2 = if (messange2.containsKey(word)) 1.0 else 0.0
+        for ((word, _) in compareWords) {
+            val p1 = if (firstMsg.containsKey(word)) 1.0 else 0.0
+            val p2 = if (secondMsg.containsKey(word)) 1.0 else 0.0
             diff += (p1 - p2) * (p1 - p2)
         }
 
-        return Math.sqrt(diff)
+        return sqrt(diff)
     }
 
-    fun isТeighbors(messange1: HashMap<TokenInforamtion, Int>, messange2: HashMap<TokenInforamtion, Int>):Boolean{
-        return countDistance(messange1, messange2) > neighborsDistance
+    fun isNeighbours(firstMsg: MutableMap<TokenInfo, Int>, secondMsg: MutableMap<TokenInfo, Int>): Boolean {
+        return countDistance(firstMsg, secondMsg) > neighborsDistance
     }
 
-
-
-    @Throws(InterruptedException::class)
     override fun buildMessageDistances():MutableList<MutableList<String>> {
         val ws = Any()
         // iteration for all messages should be parallelized
@@ -92,15 +101,21 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
         val msgLen = messages.size
         val threads = Vector<Thread>(cores)
 
-
-        for (i in MessangeInforamtion.indices){
-            for (j in i + 1 until MessangeInforamtion.size){
-                val distance = countDistance(MessangeInforamtion[i].words, MessangeInforamtion[j].words)
-                println("${distance} between ${i} and ${j}")
+        for (i in messagesInfo.indices){
+            for (j in i + 1 until messagesInfo.size){
+                val distance = countDistance(messagesInfo[i].words, messagesInfo[j].words)
+                println("$distance between $i and $j")
             }
         }
 
-
-        return MessangeInforamtion.sortedBy{it.weight}.map{it.words}.map { it.keys.map { it.word }.toMutableList()}.toMutableList()
+        return messagesInfo
+            .sortedBy { it.weight }
+            .map { it.words }
+            .map {
+                it.keys
+                    .map { it.word }
+                    .toMutableList()
+            }
+            .toMutableList()
     }
 }

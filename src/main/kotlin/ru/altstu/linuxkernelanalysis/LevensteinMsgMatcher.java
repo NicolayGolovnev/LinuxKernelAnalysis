@@ -1,9 +1,9 @@
 package ru.altstu.linuxkernelanalysis;
 
 
-import java.util.*;
+import ru.altstu.linuxkernelanalysis.kotlin.SortUtil;
 
-import static ru.altstu.linuxkernelanalysis.Main.sortByValue;
+import java.util.*;
 
 @Deprecated
 public class LevensteinMsgMatcher implements IMsgMatcher {
@@ -91,7 +91,7 @@ public class LevensteinMsgMatcher implements IMsgMatcher {
     @Override
     public void buildMsgDistances() {
         //sort the map of fixes
-        msgRelevance = sortByValue(msgRelevance);
+        msgRelevance = SortUtil.INSTANCE.sortByDescValue(msgRelevance);
 
         System.out.println("**************************************");
         System.out.println("The most 50 frequent errors:");

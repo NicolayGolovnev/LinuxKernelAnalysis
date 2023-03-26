@@ -12,19 +12,20 @@ import ru.altstu.linuxkernelanalysis.kotlin.SortUtil.sortByDescValue
 import java.io.IOException
 import java.util.*
 
-class RepositoryScanner(matherType:MessageMatcher, rep: Repository, startDate: Date, endDate: Date) {
-    private val repository:Repository = rep
-    private val git:Git = Git(rep)
-    private val Matcher: MessageMatcher = matherType
-    private val StartDate = startDate
-    private val EndDate = endDate
+class RepositoryScanner(
+    val msgMatcher: MessageMatcher,
+    val repository: Repository,
+    val startDate: Date,
+    val endDate: Date
+) {
+    private val git: Git = Git(repository)
 
-    var PathInGit:String? = null
-    var MapFileChanges: MutableMap<KeyFilePos, Int> = HashMap()
-    var MapFileNameChanges: MutableMap<String, Int> = HashMap()
+    private var gitPath: String? = null
+    private var mapFileChanges: MutableMap<KeyFilePos, Int> = hashMapOf()
+    private var mapFileNameChanges: MutableMap<String, Int> = hashMapOf()
 
     @Throws(IOException::class)
-    fun detectChanges( parent: RevCommit, commit: RevCommit) {
+    fun detectChanges(parent: RevCommit, commit: RevCommit) {
         val diffFormatter = DiffFormatter(DisabledOutputStream.INSTANCE)
         diffFormatter.setRepository(repository)
         diffFormatter.setDiffComparator(RawTextComparator.DEFAULT)
@@ -34,31 +35,29 @@ class RepositoryScanner(matherType:MessageMatcher, rep: Repository, startDate: D
         for (diff in diffs) {
             val header: FileHeader = diffFormatter.toFileHeader(diff)
             val name = header.newPath //filename with changes
-            if (PathInGit != "" && name.startsWith(PathInGit!!)) for (edit in header.toEditList()) {
-                if (MapFileNameChanges.containsKey(name)) {
-                    MapFileNameChanges[name] = 1
+            if (gitPath != "" && name.startsWith(gitPath!!)) for (edit in header.toEditList()) {
+                if (mapFileNameChanges.containsKey(name)) {
+                    mapFileNameChanges[name] = 1
                 } else {
-                    MapFileNameChanges[name] =  MapFileNameChanges[name]!! + 1
+                    mapFileNameChanges[name] = mapFileNameChanges[name]!! + 1
                 }
                 for (line in edit.endB..edit.beginB) {
                     val key = KeyFilePos(name, line)
-                    if (MapFileChanges.containsKey(key)) {
-                        MapFileChanges[key] = 1
+                    if (mapFileChanges.containsKey(key)) {
+                        mapFileChanges[key] = 1
                     } else {
-                        MapFileChanges[key] = MapFileChanges[key]!! + 1
+                        mapFileChanges[key] = mapFileChanges[key]!! + 1
                     }
                 }
             }
         }
     }
 
-    fun isCommitInBranch(commit: RevCommit, branchName:String ): Boolean {
+    fun isCommitInBranch(commit: RevCommit, branchName: String): Boolean {
         val walk = RevWalk(this.repository)
 
         val targetCommit: RevCommit = walk.parseCommit(
-            repository.resolve(
-                commit.name
-            )
+            repository.resolve(commit.name)
         )
 
         return repository.allRefs.entries.find { (key, value) ->
@@ -68,49 +67,52 @@ class RepositoryScanner(matherType:MessageMatcher, rep: Repository, startDate: D
         } != null
     }
 
-    fun getCommits() : Iterable<RevCommit>{
-        return if (PathInGit == null)
+    fun getCommits(): Iterable<RevCommit> {
+        return if (gitPath == null)
             git.log().all().call()
         else
             git.log()
-                 .add(git.repository.resolve(Constants.HEAD))
-                 .addPath(PathInGit).call()
+                .add(git.repository.resolve(Constants.HEAD))
+                .addPath(gitPath).call()
     }
 
-    fun anlyze() {
+    fun analyze() {
         val branches = git.branchList().call()
 
         for (branch in branches) {
             val branchName = branch.name
             val commits = getCommits().filter { commit ->
-                Date(commit.commitTime * 1000L).after(StartDate) &&
-                        Date(commit.commitTime * 1000L).before(EndDate) &&
+                Date(commit.commitTime * 1000L).after(startDate) &&
+                        Date(commit.commitTime * 1000L).before(endDate) &&
                         commit.parentCount > 0
             }
 
             for (commit in commits) {
                 if (isCommitInBranch(commit, branchName)) {
-                    val lines = commit.fullMessage.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                    lines.filter { line -> isFixMessage(line) }.map { line -> Matcher.addNewMessage(line) }
+                    val lines = commit.fullMessage
+                        .split("\n".toRegex())
+                        .dropLastWhile { it.isEmpty() }
+                        .toTypedArray()
+                    lines
+                        .filter { line -> isFixMessage(line) }
+                        .map { line -> msgMatcher.addNewMessage(line) }
                 }
                 detectChanges(commit.getParent(0), commit)
             }
-            Matcher.buildMessageDistances()
+            msgMatcher.buildMessageDistances()
         }
 
-        MapFileNameChanges = MapFileNameChanges.sortByDescValue()
+        mapFileNameChanges = mapFileNameChanges.sortByDescValue()
 
-        for ((fileName, postion) in MapFileNameChanges.entries) {
-            val pairsList =  MapFileChanges.entries.filter {
-                    (key,value) -> key.fileName == fileName
-            }.map {
-                    (key,value) -> Pair(key.position, value)
-            }
+        for ((fileName, _) in mapFileNameChanges.entries) {
+            val pairsList = mapFileChanges.entries
+                .filter { (key, _) -> key.fileName == fileName }
+                .map { (key, value) -> Pair(key.position, value) }
             pairsList.sortedBy { el -> el.second }
         }
     }
 
-    fun isFixMessage(message:String) : Boolean {
+    fun isFixMessage(message: String): Boolean {
         return "fix" in message
     }
 }
