@@ -5,5 +5,5 @@ interface MessageMatcher {
 
     fun addNewMessage(newMessage: String)
 
-    fun buildMessageDistances()
+    fun buildMessageDistances(): MutableList<MutableList<String>>
 }

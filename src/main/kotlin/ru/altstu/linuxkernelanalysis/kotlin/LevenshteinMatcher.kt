@@ -81,7 +81,7 @@ class LevenshteinMatcher(
         println("The closest msg is : $strMin")
     }
 
-    override fun buildMessageDistances() {
+    override fun buildMessageDistances(): MutableList<MutableList<String>> {
         messageRelevance.sortByDescValue()
 
         println("**************************************")
@@ -90,5 +90,6 @@ class LevenshteinMatcher(
         messageRelevance.entries.take(50).forEach { (key, value) ->
             println("$key/$value")
         }
+        return mutableListOf<MutableList<String>>()
     }
 }
