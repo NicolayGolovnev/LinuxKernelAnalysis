@@ -5,7 +5,6 @@ import edu.stanford.nlp.pipeline.StanfordCoreNLP
 import java.lang.RuntimeException
 import java.util.*
 import kotlin.collections.HashMap
-import kotlin.math.sqrt
 
 // TODO: нужно смотреть (отрабатывает не так, как нужно)
 class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
@@ -19,20 +18,13 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
             get() = avgTF * documentCount
     }
 
-    class MessageInfo{
-        var words: MutableMap<TokenInfo, Int> = hashMapOf()
-        // TODO возможно убрать
-        var weight = 0.0
-    }
-
-    private var messages: MutableList<String> = arrayListOf()
+    var messages: MutableList<WordMessange> = mutableListOf()
 
 
     private val tfIdf = useTfIdf
     private val posFilter: Array<String> = arrayOf("SYM", "RP", "CC", "DT", "HYPH", ",", ".", ";")
 
     private val wordCommonInfo = HashMap<String, TokenInfo>()
-    private val messagesInfo : MutableList<MessageInfo> = mutableListOf()
     private val neighborsDistance = 0.7
 
     private var documentCount = 0
@@ -56,7 +48,7 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
         val localWordCount = words.distinct().associateWith { word -> words.count { it == word } }
         documentCount++
 
-        messagesInfo.add(MessageInfo())
+        messages.add(WordMessange())
         for ((word, count) in localWordCount) {
             if (wordCommonInfo.contains(word)) {
                 wordCommonInfo[word]?.let {
@@ -72,51 +64,13 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
                     documentCount = 1
                 )
             }
-            messagesInfo.last().words[wordCommonInfo[word]!!] = count
+            messages.last().tokens[wordCommonInfo[word]!!] = count.toDouble()
         }
     }
-    fun countDistance(firstMsg: MutableMap<TokenInfo, Int>, secondMsg: MutableMap<TokenInfo, Int>): Double {
-        val compareWords = firstMsg + secondMsg
-        var diff = 0.0
 
-        for ((word, _) in compareWords) {
-            val p1 = if (firstMsg.containsKey(word)) 1.0 else 0.0
-            val p2 = if (secondMsg.containsKey(word)) 1.0 else 0.0
-            diff += (p1 - p2) * (p1 - p2)
-        }
-
-        return sqrt(diff)
-    }
-
-    fun isNeighbours(firstMsg: MutableMap<TokenInfo, Int>, secondMsg: MutableMap<TokenInfo, Int>): Boolean {
-        return countDistance(firstMsg, secondMsg) > neighborsDistance
-    }
-
-    override fun buildMessageDistances(): MutableList<MutableList<String>> {
-        // iteration for all messages should be parallelized
-        val cores = Runtime.getRuntime().availableProcessors()
-        val threads = Vector<Thread>(cores)
-
-        // TODO переделать нормально на классы - CLASTERIZATION
-        val clusters: MutableList<Cluster> = mutableListOf()
-        var clusterNum = 10
-
-
-        for (i in messagesInfo.indices) {
-            for (j in i + 1 until messagesInfo.size){
-                val distance = countDistance(messagesInfo[i].words, messagesInfo[j].words)
-                println("$distance between $i and $j")
-            }
-        }
-
-        return messagesInfo
-            .sortedBy { it.weight }
-            .map { it.words }
-            .map {
-                it.keys
-                    .map { it.word }
-                    .toMutableList()
-            }
-            .toMutableList()
+    override fun getResult(countClaster: Int): List<IMessange> {
+        val clusterization = Clusterization(messages, countClaster)
+        clusterization.execute()
+        return clusterization.centroids
     }
 }

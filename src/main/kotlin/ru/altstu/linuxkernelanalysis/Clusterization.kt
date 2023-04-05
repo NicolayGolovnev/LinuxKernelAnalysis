@@ -4,9 +4,9 @@ import kotlin.math.sqrt
 
 /** Кластеризация сообщений */
 class Clusterization(
-    var clusterNumber: Int = 10,
-    val nodes: List<WordMatcher.MessageInfo>
-) {
+    val nodes: List<IMessange>,
+    var clusterNumber: Int = 10
+    ) {
     /** Расстояние соседей между 2мя сообщениями */
     companion object {
         private const val NEIGHBORS_DISTANCE = 0.7
@@ -25,7 +25,7 @@ class Clusterization(
             clusters.add(
                 Cluster(
                     id = it,
-                    centroid = nodes[it].words
+                    centroid = nodes[it].copy()
                 )
             )
         }
@@ -55,7 +55,7 @@ class Clusterization(
              */
             var diff = 0.0
             for (index in currentCentroids.indices)
-                diff += countDistance(lastCentroids[index], currentCentroids[index])
+                diff += lastCentroids[index].getDistance(currentCentroids[index])
             if (diff == 0.0) isFinish = true
         }
     }
@@ -66,33 +66,11 @@ class Clusterization(
             cluster.clearNodes()
     }
 
-    private val centroids: List<Map<WordMatcher.TokenInfo, Int>>
+    val centroids: List<IMessange>
         get() {
-            val centroids: MutableList<Map<WordMatcher.TokenInfo, Int>> = mutableListOf()
-
-            for (cluster in clusters) {
-                val centroid = cluster.centroid
-                centroids.add(
-                    mutableMapOf<WordMatcher.TokenInfo, Int>().apply {
-                        centroid.forEach { entry -> this[entry.key] = entry.value }
-                    }
-                )
-            }
-            return centroids
+            return clusters.map {it.centroid}
         }
 
-    private fun countDistance(firstMsg: Map<WordMatcher.TokenInfo, Int>, secondMsg: Map<WordMatcher.TokenInfo, Int>): Double {
-        val compareWords = firstMsg + secondMsg
-        var diff = 0.0
-
-        for ((word, _) in compareWords) {
-            val p1 = if (firstMsg.containsKey(word)) 1.0 else 0.0
-            val p2 = if (secondMsg.containsKey(word)) 1.0 else 0.0
-            diff += (p1 - p2) * (p1 - p2)
-        }
-
-        return sqrt(diff)
-    }
 
     /** Заполняем кластеры новыми подходящими нодами */
     private fun assignCluster() {
@@ -106,19 +84,18 @@ class Clusterization(
             min = Double.MAX_VALUE
             repeat(clusterNumber) {
                 val cl = clusters[it]
-                distance = countDistance(node.words, cl.centroid)
+                distance = node.getDistance(cl.centroid)
                 if (distance < min) {
                     min = distance
                     cluster = it
                 }
             }
-            clusters[cluster].addNode(node.words)
+            clusters[cluster].addNode(node)
         }
     }
 
     /** Вычисляем на основе этих нод новые центры кластеров */
     private fun calculateCentroids() {
-        // Проходимся по всем кластерам
-        // Обходим все ноды в кластере и вычисляем новый "центр" кластера
+        clusters.map { it.reCalculateCentroid() }
     }
 }

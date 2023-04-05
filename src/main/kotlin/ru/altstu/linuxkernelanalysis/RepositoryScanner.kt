@@ -99,7 +99,8 @@ class RepositoryScanner(
                 }
                 detectChanges(commit.getParent(0), commit)
             }
-            msgMatcher.buildMessageDistances()
+            //TODO то что ниже не должно быть закоменчено
+            //msgMatcher.getResult()
         }
 
         mapFileNameChanges = mapFileNameChanges.sortByDescValue()

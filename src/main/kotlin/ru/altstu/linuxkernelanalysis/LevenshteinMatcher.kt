@@ -81,7 +81,7 @@ class LevenshteinMatcher(
         println("The closest msg is : $strMin")
     }
 
-    override fun buildMessageDistances(): MutableList<MutableList<String>> {
+    override fun getResult(countClaster: Int): List<IMessange> {
         messageRelevance.sortByDescValue()
 
         println("**************************************")
