@@ -36,7 +36,7 @@ class WordMessange:IMessange {
     }
 
     override fun toString(): String {
-        return tokens.map { (a, b) -> a.word.toString() + ": " + b.toString() }.toString()
+        return tokens.toList().sortedBy { (_, value) -> -value}.toMap().map{ (a, b) -> a.word.toString() + ": " + b.toString() }.toString()
     }
 
     override fun getAverage(otherMessange: IMessange): IMessange {

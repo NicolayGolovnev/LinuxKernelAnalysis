@@ -22,7 +22,27 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
 
 
     private val tfIdf = useTfIdf
-    private val posFilter: Array<String> = arrayOf("SYM", "RP", "CC", "DT", "HYPH", ",", ".", ";")
+    //private val posFilter: Array<String> = arrayOf("SYM", "RP", "CC", "DT", "HYPH", ",", ".", ";")
+    private val posFilter: Array<String> = arrayOf(
+        "FW",
+        "JJ",
+        "JJR",
+        "JJS",
+        "NN",
+        "NNS",
+        "NNP",
+        "NNPS",
+        "POS",
+        "RB",
+        "RBR",
+        "RBS",
+        "VB",
+        "VBD",
+        "VBG",
+        "VBN",
+        "VBP",
+        "VBZ",
+    )
 
     private val wordCommonInfo = HashMap<String, TokenInfo>()
     private val neighborsDistance = 0.7
@@ -42,8 +62,9 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
         val words = sentences
             .map { it.get(CoreAnnotations.TokensAnnotation::class.java) }
             .flatten()
-            .filter { it.get(CoreAnnotations.PartOfSpeechAnnotation::class.java) !in this.posFilter }
+            .filter { it.get(CoreAnnotations.PartOfSpeechAnnotation::class.java) in this.posFilter }
             .map { it.get(CoreAnnotations.LemmaAnnotation::class.java) }
+            .filter { it != "fix" }
 
         val localWordCount = words.distinct().associateWith { word -> words.count { it == word } }
         documentCount++

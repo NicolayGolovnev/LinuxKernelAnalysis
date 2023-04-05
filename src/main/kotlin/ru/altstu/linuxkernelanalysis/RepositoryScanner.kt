@@ -19,39 +19,7 @@ class RepositoryScanner(
     val endDate: Date
 ) {
     private val git: Git = Git(repository)
-
     private var gitPath: String? = null
-    private var mapFileChanges: MutableMap<KeyFilePos, Int> = hashMapOf()
-    private var mapFileNameChanges: MutableMap<String, Int> = hashMapOf()
-
-    @Throws(IOException::class)
-    fun detectChanges(parent: RevCommit, commit: RevCommit) {
-        val diffFormatter = DiffFormatter(DisabledOutputStream.INSTANCE)
-        diffFormatter.setRepository(repository)
-        diffFormatter.setDiffComparator(RawTextComparator.DEFAULT)
-        diffFormatter.isDetectRenames = true
-        val diffs: List<DiffEntry> = diffFormatter.scan(parent.tree, commit.tree)
-
-        for (diff in diffs) {
-            val header: FileHeader = diffFormatter.toFileHeader(diff)
-            val name = header.newPath //filename with changes
-            if (gitPath != "" && name.startsWith(gitPath!!)) for (edit in header.toEditList()) {
-                if (mapFileNameChanges.containsKey(name)) {
-                    mapFileNameChanges[name] = 1
-                } else {
-                    mapFileNameChanges[name] = mapFileNameChanges[name]!! + 1
-                }
-                for (line in edit.endB..edit.beginB) {
-                    val key = KeyFilePos(name, line)
-                    if (mapFileChanges.containsKey(key)) {
-                        mapFileChanges[key] = 1
-                    } else {
-                        mapFileChanges[key] = mapFileChanges[key]!! + 1
-                    }
-                }
-            }
-        }
-    }
 
     fun isCommitInBranch(commit: RevCommit, branchName: String): Boolean {
         val walk = RevWalk(this.repository)
@@ -76,7 +44,7 @@ class RepositoryScanner(
                 .addPath(gitPath).call()
     }
 
-    fun analyze() {
+    fun analyze(): List<IMessange> {
         val branches = git.branchList().call()
 
         for (branch in branches) {
@@ -97,20 +65,11 @@ class RepositoryScanner(
                         .filter { line -> isFixMessage(line) }
                         .map { line -> msgMatcher.addNewMessage(line) }
                 }
-                detectChanges(commit.getParent(0), commit)
             }
             //TODO то что ниже не должно быть закоменчено
-            //msgMatcher.getResult()
         }
 
-        mapFileNameChanges = mapFileNameChanges.sortByDescValue()
-
-        for ((fileName, _) in mapFileNameChanges.entries) {
-            val pairsList = mapFileChanges.entries
-                .filter { (key, _) -> key.fileName == fileName }
-                .map { (key, value) -> Pair(key.position, value) }
-            pairsList.sortedBy { el -> el.second }
-        }
+        return msgMatcher.getResult(5)
     }
 
     fun isFixMessage(message: String): Boolean {
