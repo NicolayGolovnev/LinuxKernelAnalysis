@@ -1,4 +1,4 @@
-package ru.altstu.linuxkernelanalysis.kotlin
+package ru.altstu.linuxkernelanalysis
 
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.diff.*
@@ -8,7 +8,7 @@ import org.eclipse.jgit.patch.FileHeader
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.util.io.DisabledOutputStream
-import ru.altstu.linuxkernelanalysis.kotlin.SortUtil.sortByDescValue
+import ru.altstu.linuxkernelanalysis.SortUtil.sortByDescValue
 import java.io.IOException
 import java.util.*
 

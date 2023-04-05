@@ -1,4 +1,4 @@
-package ru.altstu.linuxkernelanalysis.kotlin
+package ru.altstu.linuxkernelanalysis
 
 
 class KeyFilePos(

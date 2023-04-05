@@ -1,6 +1,6 @@
-package ru.altstu.linuxkernelanalysis.kotlin
+package ru.altstu.linuxkernelanalysis
 
-import ru.altstu.linuxkernelanalysis.kotlin.SortUtil.sortByDescValue
+import ru.altstu.linuxkernelanalysis.SortUtil.sortByDescValue
 
 class LevenshteinMatcher(
     /** LinkedList ??? */

@@ -1,4 +1,4 @@
-package ru.altstu.linuxkernelanalysis.kotlin
+package ru.altstu.linuxkernelanalysis
 
 import edu.stanford.nlp.ling.CoreAnnotations
 import edu.stanford.nlp.pipeline.StanfordCoreNLP
@@ -9,7 +9,7 @@ import kotlin.math.sqrt
 
 // TODO: нужно смотреть (отрабатывает не так, как нужно)
 class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
-    data class TokenInfo(
+    class TokenInfo(
         var word: String,
         var count: Int,
         var avgTF: Double,
@@ -21,6 +21,7 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
 
     class MessageInfo{
         var words: MutableMap<TokenInfo, Int> = hashMapOf()
+        // TODO возможно убрать
         var weight = 0.0
     }
 
@@ -55,6 +56,7 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
         val localWordCount = words.distinct().associateWith { word -> words.count { it == word } }
         documentCount++
 
+        messagesInfo.add(MessageInfo())
         for ((word, count) in localWordCount) {
             if (wordCommonInfo.contains(word)) {
                 wordCommonInfo[word]?.let {
@@ -70,11 +72,7 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
                     documentCount = 1
                 )
             }
-            messagesInfo.add(
-                MessageInfo().apply {
-                    this.words[wordCommonInfo[word]!!] = count
-                }
-            )
+            messagesInfo.last().words[wordCommonInfo[word]!!] = count
         }
     }
     fun countDistance(firstMsg: MutableMap<TokenInfo, Int>, secondMsg: MutableMap<TokenInfo, Int>): Double {
@@ -94,14 +92,17 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
         return countDistance(firstMsg, secondMsg) > neighborsDistance
     }
 
-    override fun buildMessageDistances():MutableList<MutableList<String>> {
-        val ws = Any()
+    override fun buildMessageDistances(): MutableList<MutableList<String>> {
         // iteration for all messages should be parallelized
         val cores = Runtime.getRuntime().availableProcessors()
-        val msgLen = messages.size
         val threads = Vector<Thread>(cores)
 
-        for (i in messagesInfo.indices){
+        // TODO переделать нормально на классы - CLASTERIZATION
+        val clusters: MutableList<Cluster> = mutableListOf()
+        var clusterNum = 10
+
+
+        for (i in messagesInfo.indices) {
             for (j in i + 1 until messagesInfo.size){
                 val distance = countDistance(messagesInfo[i].words, messagesInfo[j].words)
                 println("$distance between $i and $j")

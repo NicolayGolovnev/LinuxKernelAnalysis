@@ -1,13 +1,10 @@
 package ru.altstu.linuxkernelanalysis
-import ru.altstu.linuxkernelanalysis.kotlin.WordMatcher
 
 fun main(args: Array<String>) {
     val boopa = WordMatcher(true)
-    boopa.addNewMessage("fix")
-    boopa.addNewMessage("fix")
-
-
-
+    boopa.addNewMessage("fixed dore")
+    boopa.addNewMessage("fixed core")
+    boopa.addNewMessage("boopa")
 
 
     println(boopa.buildMessageDistances())
