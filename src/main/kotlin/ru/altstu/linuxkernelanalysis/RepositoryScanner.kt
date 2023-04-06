@@ -10,6 +10,8 @@ import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.util.io.DisabledOutputStream
 import ru.altstu.linuxkernelanalysis.SortUtil.sortByDescValue
 import java.io.IOException
+import me.tongfei.progressbar.ProgressBar
+
 import java.util.*
 
 class RepositoryScanner(
@@ -54,6 +56,7 @@ class RepositoryScanner(
                         Date(commit.commitTime * 1000L).before(endDate) &&
                         commit.parentCount > 0
             }
+            val progressBar = ProgressBar("Repository scan", commits.size.toLong())
 
             for (commit in commits) {
                 if (isCommitInBranch(commit, branchName)) {
@@ -65,11 +68,10 @@ class RepositoryScanner(
                         .filter { line -> isFixMessage(line) }
                         .map { line -> msgMatcher.addNewMessage(line) }
                 }
+                progressBar.step()
             }
-            //TODO то что ниже не должно быть закоменчено
         }
-
-        return msgMatcher.getResult(5)
+        return msgMatcher.getResult(20)
     }
 
     fun isFixMessage(message: String): Boolean {

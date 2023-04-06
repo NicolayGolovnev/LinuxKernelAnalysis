@@ -6,20 +6,6 @@ import java.io.File
 import java.util.*
 
 fun main(args: Array<String>) {
-    //val boopa = WordMatcher(true)
-    //    boopa.addNewMessage("fixed dore")
-    //    boopa.addNewMessage("fixed core")
-    //    boopa.addNewMessage("boopa")
-    //    boopa.addNewMessage("loopa")
-    //    boopa.addNewMessage("zoopa")
-    //    boopa.addNewMessage("zoopa boopa")
-    //
-    // val result = boopa.getResult(5)
-    //for( r in result){
-    //    println(r.toString())
-    //}
-
-
     val repoDir = File("D:\\gimp_for_parse\\gimp\\.git")
     val builder: FileRepositoryBuilder = FileRepositoryBuilder()
         .setGitDir(repoDir)
@@ -29,9 +15,8 @@ fun main(args: Array<String>) {
     val repo: Repository = builder.build()
 
     val calendar = Calendar.getInstance()
-    calendar.add(Calendar.MONTH, -48)
+    calendar.add(Calendar.MONTH, -5)
     val oneMonthAgo = calendar.time
-
 
     val scaner = RepositoryScanner(WordMatcher(true), repo, oneMonthAgo,Date(Long.MAX_VALUE))
 

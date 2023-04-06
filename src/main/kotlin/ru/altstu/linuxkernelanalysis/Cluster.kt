@@ -10,7 +10,11 @@ class Cluster(
     }
 
     fun reCalculateCentroid() : IMessange{
-        centroid = nodes.reduce{a, b -> a.getAverage(b)}
+        if(nodes.size == 0){
+            centroid = centroid.getZero()
+        }else {
+            centroid = nodes.reduce { a, b -> a.getAverage(b) }
+        }
         return centroid
     }
 

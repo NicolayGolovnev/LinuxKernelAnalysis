@@ -24,7 +24,7 @@ dependencies {
     implementation("edu.stanford.nlp:stanford-corenlp:${property("corenlpVersion")}:models")
     implementation("edu.stanford.nlp:stanford-corenlp:${property("corenlpVersion")}:models-english")
     implementation("edu.stanford.nlp:stanford-corenlp:${property("corenlpVersion")}:models-english-kbp")
-
+    implementation("me.tongfei:progressbar:0.9.3")
     testImplementation(kotlin("test"))
 }
 

@@ -22,7 +22,6 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
 
 
     private val tfIdf = useTfIdf
-    //private val posFilter: Array<String> = arrayOf("SYM", "RP", "CC", "DT", "HYPH", ",", ".", ";")
     private val posFilter: Array<String> = arrayOf(
         "FW",
         "JJ",
@@ -44,6 +43,12 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
         "VBZ",
     )
 
+    private val tokenFilter: Array<String> = arrayOf(
+        "be",
+        "fix"
+    )
+
+
     private val wordCommonInfo = HashMap<String, TokenInfo>()
     private val neighborsDistance = 0.7
 
@@ -64,7 +69,7 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
             .flatten()
             .filter { it.get(CoreAnnotations.PartOfSpeechAnnotation::class.java) in this.posFilter }
             .map { it.get(CoreAnnotations.LemmaAnnotation::class.java) }
-            .filter { it != "fix" }
+            .filter { it !in tokenFilter }
 
         val localWordCount = words.distinct().associateWith { word -> words.count { it == word } }
         documentCount++
@@ -90,6 +95,7 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
     }
 
     override fun getResult(countClaster: Int): List<IMessange> {
+        WordMessange.countDocument = documentCount
         val clusterization = Clusterization(messages, countClaster)
         clusterization.execute()
         return clusterization.centroids
