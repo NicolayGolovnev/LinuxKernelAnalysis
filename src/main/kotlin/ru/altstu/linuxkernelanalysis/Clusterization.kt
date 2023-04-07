@@ -38,6 +38,13 @@ class Clusterization(
                         minDistance = distance
                         closestClusters = Pair(i, j)
                     }
+                    if(minDistance == 0.0){
+                        break
+                    }
+                }
+
+                if(minDistance == 0.0){
+                    break
                 }
             }
 
