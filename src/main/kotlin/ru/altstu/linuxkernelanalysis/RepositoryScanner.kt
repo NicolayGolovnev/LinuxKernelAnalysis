@@ -1,18 +1,14 @@
 package ru.altstu.linuxkernelanalysis
-
+import me.tongfei.progressbar.ProgressBar
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.diff.*
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.patch.FileHeader
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.revwalk.RevWalk
-import org.eclipse.jgit.util.io.DisabledOutputStream
-import ru.altstu.linuxkernelanalysis.SortUtil.sortByDescValue
-import java.io.IOException
-import me.tongfei.progressbar.ProgressBar
-
 import java.util.*
+import java.util.concurrent.ForkJoinPool
+import kotlin.concurrent.thread
+
 
 class RepositoryScanner(
     val msgMatcher: MessageMatcher,
@@ -47,31 +43,25 @@ class RepositoryScanner(
     }
 
     fun analyze(): List<IMessange> {
-        val branches = git.branchList().call()
 
-        for (branch in branches) {
-            val branchName = branch.name
-            val commits = getCommits().filter { commit ->
-                Date(commit.commitTime * 1000L).after(startDate) &&
-                        Date(commit.commitTime * 1000L).before(endDate) &&
-                        commit.parentCount > 0
-            }
-            val progressBar = ProgressBar("Repository scan", commits.size.toLong())
+        val list =  getCommits().toList().filter { commit ->
+            Date(commit.commitTime * 1000L).after(startDate) &&
+                    Date(commit.commitTime * 1000L).before(endDate) &&
+                    commit.parentCount > 0}
 
-            for (commit in commits) {
-                if (isCommitInBranch(commit, branchName)) {
-                    val lines = commit.fullMessage
-                        .split("\n".toRegex())
-                        .dropLastWhile { it.isEmpty() }
-                        .toTypedArray()
-                    lines
-                        .filter { line -> isFixMessage(line) }
-                        .map { line -> msgMatcher.addNewMessage(line) }
-                }
+        val progressBar = ProgressBar("Repository scan", list.size.toLong())
+
+
+
+
+        list.forEach {
                 progressBar.step()
+                it.fullMessage.split("\n".toRegex()).dropLastWhile { it.isEmpty() }
+                    .filter { messange -> isFixMessage(messange) }
+                    .forEach { messange -> msgMatcher.addNewMessage(messange) }
             }
-        }
-        return msgMatcher.getResult(20)
+
+        return msgMatcher.getResult(5)
     }
 
     fun isFixMessage(message: String): Boolean {

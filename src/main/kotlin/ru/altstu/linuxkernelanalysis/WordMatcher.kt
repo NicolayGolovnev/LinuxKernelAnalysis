@@ -2,6 +2,7 @@ package ru.altstu.linuxkernelanalysis
 
 import edu.stanford.nlp.ling.CoreAnnotations
 import edu.stanford.nlp.pipeline.StanfordCoreNLP
+import me.tongfei.progressbar.ProgressBar
 import java.lang.RuntimeException
 import java.util.*
 import kotlin.collections.HashMap
@@ -11,17 +12,10 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
     class TokenInfo(
         var word: String,
         var count: Int,
-        var avgTF: Double,
         var documentCount: Int
-    ) {
-        val sumOfTF: Double
-            get() = avgTF * documentCount
-    }
+    )
 
     var messages: MutableList<WordMessange> = mutableListOf()
-
-
-    private val tfIdf = useTfIdf
     private val posFilter: Array<String> = arrayOf(
         "FW",
         "JJ",
@@ -31,26 +25,8 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
         "NNS",
         "NNP",
         "NNPS",
-        "POS",
-        "RB",
-        "RBR",
-        "RBS",
-        "VB",
-        "VBD",
-        "VBG",
-        "VBN",
-        "VBP",
-        "VBZ",
     )
-
-    private val tokenFilter: Array<String> = arrayOf(
-        "be",
-        "fix"
-    )
-
-
     private val wordCommonInfo = HashMap<String, TokenInfo>()
-    private val neighborsDistance = 0.7
 
     private var documentCount = 0
 
@@ -69,7 +45,6 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
             .flatten()
             .filter { it.get(CoreAnnotations.PartOfSpeechAnnotation::class.java) in this.posFilter }
             .map { it.get(CoreAnnotations.LemmaAnnotation::class.java) }
-            .filter { it !in tokenFilter }
 
         val localWordCount = words.distinct().associateWith { word -> words.count { it == word } }
         documentCount++
@@ -79,14 +54,12 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
             if (wordCommonInfo.contains(word)) {
                 wordCommonInfo[word]?.let {
                     it.count += count
-                    it.avgTF += (it.sumOfTF + count.toDouble() / words.size) / (it.documentCount + 1)
                     it.documentCount++
                 }
             } else {
                 wordCommonInfo[word] = TokenInfo(
                     word = word,
                     count = count,
-                    avgTF = count.toDouble()/words.size,
                     documentCount = 1
                 )
             }
@@ -96,8 +69,23 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
 
     override fun getResult(countClaster: Int): List<IMessange> {
         WordMessange.countDocument = documentCount
-        val clusterization = Clusterization(messages, countClaster)
-        clusterization.execute()
-        return clusterization.centroids
+
+        val clusterization = Clusterization(messages, messages.count()/50)
+        var bestResult = clusterization.getResult()
+        //var bestMetrik = clusterization.calculateSilhouetteCoefficient()
+//
+//
+        //while (clusterization.clusterNumber != 1){
+        //    progressBar.step()
+        //    clusterization.clusterNumber--
+        //    val curResult = clusterization.getResult()
+        //    val curMetrik =  clusterization.calculateSilhouetteCoefficient()
+        //    if(bestMetrik < curMetrik){
+        //        bestResult = curResult
+        //        bestMetrik = curMetrik
+        //    }
+        //}
+
+        return bestResult
     }
 }

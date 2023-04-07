@@ -1,101 +1,53 @@
 package ru.altstu.linuxkernelanalysis
 
-import kotlin.math.sqrt
+import me.tongfei.progressbar.ProgressBar
 
 /** Кластеризация сообщений */
 class Clusterization(
     val nodes: List<IMessange>,
     var clusterNumber: Int = 10
-    ) {
-    /** Расстояние соседей между 2мя сообщениями */
-    companion object {
-        private const val NEIGHBORS_DISTANCE = 0.7
+) {
+    val clusters = mutableListOf<Cluster>()
+
+    fun calculateSilhouetteCoefficient(): Double {
+        return clusters.map { it.calculateSilhouetteCoefficient(clusters)}.average()
     }
 
-    /** Кластеры */
-    private val clusters: MutableList<Cluster> = mutableListOf()
 
-    fun execute() {
-        // Инициализация кластеров начальными значениями нод
-        val messagesSize = nodes.size
-        if (clusterNumber > messagesSize)
-            clusterNumber = messagesSize
+    fun getResult(): List<IMessange> {
 
-        repeat(clusterNumber) {
-            clusters.add(
-                Cluster(
-                    id = it,
-                    centroid = nodes[it].copy()
-                )
-            )
+        if(clusters.isEmpty()) {
+            for (node in nodes) {
+                clusters.add(Cluster(listOf(node), 0.0))
+            }
         }
 
-        var isFinish = false
-
-        /** Основной алгоритм */
-        while (!isFinish) {
-            /** Чистка нод каждого кластера */
-            clearClustersNodes()
-
-            /** Запоминаем старые центры кластеров */
-            val lastCentroids = centroids
-
-            /** Заполняем кластеры новыми подходящими нодами */
-            assignCluster()
-
-            /** Вычисляем на основе этих нод новые центры кластеров */
-            calculateCentroids()
-
-            /** Запомнили новые центры кластеров */
-            val currentCentroids = centroids
-
-            /**
-             * Смотрим разницу между центрами кластеров.
-             * Если разница минимальна (0.0), значит лучше уже не добиться -> искомые кластеры
-             */
-            var diff = 0.0
-            for (index in currentCentroids.indices)
-                diff += lastCentroids[index].getDistance(currentCentroids[index])
-            if (diff == 0.0) isFinish = true
-        }
-    }
-
-    /** Чистка нод каждого кластера */
-    private fun clearClustersNodes() {
-        for (cluster in clusters)
-            cluster.clearNodes()
-    }
-
-    val centroids: List<IMessange>
-        get() {
-            return clusters.map {it.centroid}
-        }
+        val progressBar = ProgressBar("Clusters compress", (clusters.size - clusterNumber).toLong())
 
 
-    /** Заполняем кластеры новыми подходящими нодами */
-    private fun assignCluster() {
-//        var min = NEIGHBORS_DISTANCE
-        var min: Double
-        var cluster = 0
-        var distance = 0.0
+        while (clusters.size > clusterNumber) {
+            progressBar.step()
 
-        for (node in nodes) {
-            // TODO возможно поставить максимум ?? возникнут проблемы с пустыми кластерами при NEIGHBORS_DISTANCE
-            min = Double.MAX_VALUE
-            repeat(clusterNumber) {
-                val cl = clusters[it]
-                distance = node.getDistance(cl.centroid)
-                if (distance < min) {
-                    min = distance
-                    cluster = it
+
+            var minDistance = Double.MAX_VALUE
+            var closestClusters = Pair(0, 1)
+            for (i in 0 until clusters.size - 1) {
+                for (j in i + 1 until clusters.size) {
+                    val distance = clusters[i].distance(clusters[j])
+                    if (distance < minDistance) {
+                        minDistance = distance
+                        closestClusters = Pair(i, j)
+                    }
                 }
             }
-            clusters[cluster].addNode(node)
+
+            val newCluster = clusters[closestClusters.first].merge(clusters[closestClusters.second])
+            clusters.removeAt(closestClusters.second)
+            clusters.removeAt(closestClusters.first)
+            clusters.add(newCluster)
         }
+        return clusters.map {it.getCentroid()}
     }
 
-    /** Вычисляем на основе этих нод новые центры кластеров */
-    private fun calculateCentroids() {
-        clusters.map { it.reCalculateCentroid() }
-    }
+
 }
