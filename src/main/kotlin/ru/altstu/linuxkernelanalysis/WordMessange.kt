@@ -20,12 +20,25 @@ class WordMessange:IMessange {
 
     override fun getDistance(otherMessange: IMessange): Double {
         if(otherMessange is WordMessange) {
-            val unionTokens = this.tokens + otherMessange.tokens
-            val intersection = this.tokens.filter { otherMessange.tokens.containsKey(it.key) }
-            return 1 - intersection.size / unionTokens.size.toDouble()
+            val commonKeys = this.tokens.keys.intersect(otherMessange.tokens.keys)
+            if (commonKeys.isEmpty()) {
+                return 0.0
+            }
+            val dotProduct = commonKeys.sumOf{ key -> this.tokens[key]!! * otherMessange.tokens[key]!! }
+            val magnitude1 = this.tokens.values.sumOf{value -> value * value }.let { sqrt(it) }
+            val magnitude2 = otherMessange.tokens.values.sumOf { value -> value * value }.let { sqrt(it) }
+            return 1 - (dotProduct / (magnitude1 * magnitude2))
+
+
+            //val unionTokens = this.tokens + otherMessange.tokens
+            //val intersection = this.tokens.filter { otherMessange.tokens.containsKey(it.key) }
+            //return 1 - intersection.size / unionTokens.size.toDouble()
         }
         throw IOException()
     }
+
+
+
 
     override fun copy(): IMessange {
         val copy = WordMessange()

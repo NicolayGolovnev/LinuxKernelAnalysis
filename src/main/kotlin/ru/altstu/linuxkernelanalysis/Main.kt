@@ -15,7 +15,7 @@ fun main(args: Array<String>) {
     val repo: Repository = builder.build()
 
     val calendar = Calendar.getInstance()
-    calendar.add(Calendar.MONTH, -12)
+    calendar.add(Calendar.WEEK_OF_MONTH, -8)
     val oneMonthAgo = calendar.time
 
     val scaner = RepositoryScanner(WordMatcher(true), repo, oneMonthAgo,Date(Long.MAX_VALUE))

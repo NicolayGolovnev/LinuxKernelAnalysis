@@ -18,14 +18,26 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
     var messages: MutableList<WordMessange> = mutableListOf()
     private val posFilter: Array<String> = arrayOf(
         "FW",
-        "JJ",
-        "JJR",
-        "JJS",
         "NN",
-        "NNS",
-        "NNP",
-        "NNPS",
+        "NNS"
     )
+
+    private val tokenFilter: Array<String> = arrayOf(
+        "be",
+        "fix",
+        "change",
+        "fixup",
+        "hotfix",
+        "check",
+        "bugfix",
+        "bug",
+        "problem",
+        "git",
+        "teg",
+        "error",
+        "branch"
+    )
+
     private val wordCommonInfo = HashMap<String, TokenInfo>()
 
     private var documentCount = 0
@@ -45,6 +57,7 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
             .flatten()
             .filter { it.get(CoreAnnotations.PartOfSpeechAnnotation::class.java) in this.posFilter }
             .map { it.get(CoreAnnotations.LemmaAnnotation::class.java) }
+            .filter { it !in tokenFilter }
 
         val localWordCount = words.distinct().associateWith { word -> words.count { it == word } }
         documentCount++
@@ -70,7 +83,7 @@ class WordMatcher(useTfIdf: Boolean) : MessageMatcher {
     override fun getResult(countClaster: Int): List<IMessange> {
         WordMessange.countDocument = documentCount
 
-        val clusterization = Clusterization(messages, messages.count()/50)
+        val clusterization = Clusterization(messages, 20)
         var bestResult = clusterization.getResult()
         //var bestMetrik = clusterization.calculateSilhouetteCoefficient()
 //
