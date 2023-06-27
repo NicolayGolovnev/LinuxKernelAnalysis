@@ -1,67 +1,48 @@
-from abc import ABCMeta, abstractmethod
+import os
 
 import numpy as np
+import config
 from nltk.stem import WordNetLemmatizer
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 import nltk
+from tqdm import tqdm
+import csv
+
 
 
 class TextTokenizer():
     def __init__(self):
-        self.stop_word = [
-            'fix',
-            'error',
-            'thunderbolt',
-            'of',
-            'and',
-            'for',
-            'in',
-            'all',
-            'add',
-            'non',
-            'also',
-            'there',
-            'the',
-            'build',
-            'on',
-            'by',
-            'with',
-            'to',
-            'this',
-            '9aabb68568b4',
-            '11',
-            '1000',
-            'issue',
-            'driver',
-            'code',
-            'following',
-            'after',
-            'if',
-        ]
+        self.dict = []
 
-        self.vectorizer = TfidfVectorizer(use_idf=False,
-                                          norm=None,
-                                          smooth_idf=False,
-                                          sublinear_tf=False,
-                                          min_df=2,
-                                          max_df=1.0,
-                                          stop_words=self.stop_word)
+        self.count_vectorizer = CountVectorizer(
+            min_df=2,
+            max_df=1.0,
+            stop_words=config.stop_words
+        )
+
+        self.tfidf_transformer = TfidfTransformer(use_idf=False,
+                                                  norm=None,
+                                                  smooth_idf=False,
+                                                  sublinear_tf=False)
 
     def vectorize(self, tokens_colection):
-
         tokens_colection = [list(x) for x in set(tuple(x) for x in tokens_colection)]
+        if config.use_save_file and os.path.exists(config.bow_vectors_path):
+            bow_vectors = np.load(config.bow_vectors_path)
+        else:
+            bow_vectors = self.count_vectorizer.fit_transform([' '.join(d) for d in tokens_colection])
+            if config.use_save_file:
+                np.save(config.bow_vectors_path, bow_vectors.toarray())
 
-        bow = self.vectorizer.fit_transform([' '.join(d) for d in tokens_colection])
-
-        norms = np.linalg.norm(bow.toarray(), axis=1)
-        vectors = bow.toarray()[norms != 0]
-
+        idfs_vecors = self.tfidf_transformer.fit_transform(bow_vectors)
+        norms = np.linalg.norm(idfs_vecors.toarray(), axis=1)
+        vectors = idfs_vecors.toarray()[norms != 0]
+        self.dict = self.tfidf_transformer.get_feature_names_out()
         return np.unique(vectors, axis=0)
 
     def vector_to_message(self, vector):
         sorted_indexes = np.argsort(vector)[::-1]
-        features = self.vectorizer.get_feature_names_out()
-        texts_restored = [features[i] for i in sorted_indexes[:5]]
+        texts_restored = [self.dict[i] for i in sorted_indexes[:5]]
         return texts_restored
 
     def unit_to_token(self, unit):
@@ -73,13 +54,41 @@ class TextTokenizer():
 
     def commit_to_units(self, commit):
         fix_marks = ['fix']
-        # regex = re.compile(r'^\s*-(?:(?!^$)[\s\S])+$', re.MULTILINE)
         units = []
-        for unit in commit.message.lower().split('\n'):
+        if not commit.message.startswith("Merge"):
             for mark in fix_marks:
-                if mark in unit:
-                    if 'clx' in unit:
-                        print(commit)
-                    units.append(unit)
+                if mark in commit.message.lower():
+                    units.append(self.get_message_info(commit.message.lower()))
                     break
         return units
+
+    def get_message_info(self, message):
+        rows = message.split("\n")
+        last_row_index = len(rows) - 1
+        while last_row_index != 0:
+            first_word_in_raw = rows[last_row_index].split(" ")[0]
+            if first_word_in_raw == "" or first_word_in_raw[-1] == ':':
+                last_row_index -= 1
+            else:
+                break
+        return "\n".join(rows[:last_row_index + 1])
+
+
+
+
+    def rep_to_vectors(self, repo):
+        messages = []
+        if config.use_save_file and os.path.exists(config.dict_path):
+            self.dict = np.genfromtxt(config.dict_path, dtype=str)
+
+        if not config.use_save_file or not os.path.exists(config.dict_path):
+            for commit in tqdm(repo.iter_commits(paths=config.git_file_path), desc='Commit Processing'):
+                messages += [self.unit_to_token(unit) for unit in self.commit_to_units(commit)]
+
+
+        vectors = self.vectorize(messages)
+
+        if config.use_save_file:
+            np.savetxt(config.dict_path, self.dict, delimiter="\n", fmt="%s")
+
+        return vectors
