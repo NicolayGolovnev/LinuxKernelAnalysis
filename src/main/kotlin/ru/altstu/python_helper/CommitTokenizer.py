@@ -31,18 +31,19 @@ class TextTokenizer():
             bow_vectors = np.load(config.bow_vectors_path)
         else:
             bow_vectors = self.count_vectorizer.fit_transform([' '.join(d) for d in tokens_colection])
+            self.dict = self.count_vectorizer.get_feature_names_out()
             if config.use_save_file:
                 np.save(config.bow_vectors_path, bow_vectors.toarray())
 
         idfs_vecors = self.tfidf_transformer.fit_transform(bow_vectors)
         norms = np.linalg.norm(idfs_vecors.toarray(), axis=1)
         vectors = idfs_vecors.toarray()[norms != 0]
-        self.dict = self.tfidf_transformer.get_feature_names_out()
+
         return np.unique(vectors, axis=0)
 
     def vector_to_message(self, vector):
         sorted_indexes = np.argsort(vector)[::-1]
-        texts_restored = [self.dict[i] for i in sorted_indexes[:5]]
+        texts_restored = [self.dict[i] for i in sorted_indexes[:config.short_output_word_ciunt]]
         return texts_restored
 
     def unit_to_token(self, unit):
@@ -71,9 +72,8 @@ class TextTokenizer():
                 last_row_index -= 1
             else:
                 break
-        return "\n".join(rows[:last_row_index + 1])
-
-
+        info = "\n".join(rows[:last_row_index + 1])
+        return info
 
 
     def rep_to_vectors(self, repo):
@@ -82,13 +82,17 @@ class TextTokenizer():
             self.dict = np.genfromtxt(config.dict_path, dtype=str)
 
         if not config.use_save_file or not os.path.exists(config.dict_path):
+            count = 0
             for commit in tqdm(repo.iter_commits(paths=config.git_file_path), desc='Commit Processing'):
                 messages += [self.unit_to_token(unit) for unit in self.commit_to_units(commit)]
+                count += 1
+                if count > config.max_commit:
+                    break
 
 
         vectors = self.vectorize(messages)
 
         if config.use_save_file:
-            np.savetxt(config.dict_path, self.dict, delimiter="\n", fmt="%s")
+            np.savetxt(config.dict_path, self.dict, delimiter="\n", fmt="%s", encoding='utf-8')
 
         return vectors

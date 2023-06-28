@@ -1,6 +1,7 @@
 # repo
 repo_path = 'D:\linux\linux\.git'
 git_file_path = 'kernel/'
+max_commit = 10000000000000000000000000000000
 
 # vectorization
 
@@ -36,7 +37,7 @@ stop_words = [
 ]
 
 # files
-use_save_file = False
+use_save_file = True
 dict_path = "commit_dict.txt"
 tfidf_path = "dict.txt"
 bow_vectors_path = "vectors.npy"
@@ -47,3 +48,6 @@ count_clusters_in_sample = 8
 threshold = 0.498
 
 # clustering
+
+#output
+short_output_word_ciunt = 5
