@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     print("Find", len(vectors), "messages")
     print("Covered", get_metric(Z, len(vectors), config.count_clusters_in_sample, config.threshold)[0], "%")
-    print("Scatter", get_metric(Z, len(vectors), config.count_clusters_in_sample, config.threshold)[1], "%")
+    print("Fragmentation", get_metric(Z, len(vectors), config.count_clusters_in_sample, config.threshold)[1], "%")
 
 
     plt.figure(figsize=(10, 5))
@@ -50,14 +50,14 @@ if __name__ == '__main__':
     plt.axhline(y=config.threshold, color='r', linestyle='--')
     plt.show()
 
-    X = np.arange(0, 0.9, 0.001)
+    X = np.arange(0, 0.8, 0.001)
     Y1 = np.array([get_metric(Z, len(vectors), 4, x)[0] for x in X])
     Y2 = np.array([get_metric(Z, len(vectors), 4, x)[1] for x in X])
 
 
     plt.figure(figsize=(10, 5))
     plt.plot(X, Y1, label='Covered')
-    plt.plot(X, Y2, label='Equability')
+    plt.plot(X, Y2, label='Fragmentation')
     plt.axvline(x=config.threshold, color='r', linestyle='--')
 
     plt.legend()

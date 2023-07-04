@@ -8,6 +8,7 @@ import nltk
 from tqdm import tqdm
 import csv
 
+from CommitChecker import addition_in_commit
 
 
 class TextTokenizer():
@@ -84,6 +85,8 @@ class TextTokenizer():
         if not config.use_save_file or not os.path.exists(config.dict_path):
             count = 0
             for commit in tqdm(repo.iter_commits(paths=config.git_file_path), desc='Commit Processing'):
+                #if len(commit.parents) == 1:
+                #    addition_in_commit(commit)
                 messages += [self.unit_to_token(unit) for unit in self.commit_to_units(commit)]
                 count += 1
                 if count > config.max_commit:
