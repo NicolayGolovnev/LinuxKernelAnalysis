@@ -8,8 +8,6 @@ import nltk
 from tqdm import tqdm
 import csv
 
-from CommitChecker import addition_in_commit
-
 
 class TextTokenizer():
     def __init__(self):

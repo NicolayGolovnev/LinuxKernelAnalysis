@@ -1,4 +1,9 @@
 import sys
+
+from pycparser import CParser
+from pycparser.c_lexer import CLexer
+from pycparser.ply.lex import TOKEN
+
 sys.setrecursionlimit(20000)
 
 import numpy as np
@@ -10,22 +15,33 @@ from MatrixLenGenerator import create_matrix, get_mean
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 import matplotlib.pyplot as plt
 from collections import Counter
+from сommitСlassifier import CommitVectorizer
 
 
 def cluster_to_string(messages, data, number):
     mean = get_mean(np.array([msg for i, msg in enumerate(messages) if data[i] == number]))
     return mean
+
+
 def get_metric(tree, count_messages, count_clasters, treshold):
     labels = fcluster(tree, treshold, criterion='distance')
     counter = Counter(labels)
     count_clasters = min(count_clasters, len(counter))
     counter = sorted(counter.items(), key=lambda x: x[1], reverse=True)
-    return sum([index[1] for index in counter[:count_clasters]])/count_messages * 100, counter[count_clasters -1][1] / counter[0][1] * 100
+    return sum([index[1] for index in counter[:count_clasters]]) / count_messages * 100, counter[count_clasters - 1][
+        1] / counter[0][1] * 100
+
+
 
 
 if __name__ == '__main__':
     tt = TextTokenizer()
     repo = git.Repo(config.repo_path)
+    classifier = CommitVectorizer()
+
+    white_samples, grey_samples = classifier.make_samples(repo)
+    white_vectors = list(map(lambda x: classifier.get_vector_from_commit(repo, x), white_samples))
+    gray_vectors = map(lambda x: classifier.get_vector_from_commit(repo, x), grey_samples)
 
     vectors = tt.rep_to_vectors(repo)
     matrix = create_matrix(vectors)
@@ -42,7 +58,6 @@ if __name__ == '__main__':
     print("Covered", get_metric(Z, len(vectors), config.count_clusters_in_sample, config.threshold)[0], "%")
     print("Fragmentation", get_metric(Z, len(vectors), config.count_clusters_in_sample, config.threshold)[1], "%")
 
-
     plt.figure(figsize=(10, 5))
     plt.title('Hierarchical Clustering Dendrogram')
     plt.ylabel('Distance')
@@ -53,7 +68,6 @@ if __name__ == '__main__':
     X = np.arange(0, 0.8, 0.001)
     Y1 = np.array([get_metric(Z, len(vectors), 4, x)[0] for x in X])
     Y2 = np.array([get_metric(Z, len(vectors), 4, x)[1] for x in X])
-
 
     plt.figure(figsize=(10, 5))
     plt.plot(X, Y1, label='Covered')
