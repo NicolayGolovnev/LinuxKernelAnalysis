@@ -6,12 +6,12 @@ from typing import List, Any
 import numpy as np
 
 repo_path = 'D:\linux\linux\.git'
-git_file_path = 'drivers/thunderbolt/'
-max_commit = 10000000000000000000000000000000
+git_file_path = 'kernel/'
+max_commit = 1000
 
 # classification
-white_sample_len = 1000
-grey_sample_len = 5000
+white_sample_len = 2000
+grey_sample_len = 8000
 white_sample_words = ['bugzilla']
 functionality_words = ['robust', 'unnecessary', 'improve', 'future', 'anticipation', 'superfluous', 'remove', 'unused']
 bug_words = ['bug', 'error', 'vulnerability', 'issue']
@@ -52,14 +52,16 @@ stop_words = [
 # files
 use_save_file = True
 override_file = False
-white_path = "white_commits.txt"
-grey_path = "grey_commits.txt"
-white_vectors_path = "white_vectors.npy"
-gray_vectors_path = "gray_vectors.npy"
 
-dict_path = "commit_dict.txt"
-bow_vectors_path = "vectors.npy"
-matrix_length_path = "matrix.npy"
+white_path = "saves/white_commits.txt"
+grey_path = "saves/grey_commits.txt"
+white_vectors_path = "saves/white_vectors.npy"
+gray_vectors_path = "saves/gray_vectors.npy"
+
+result_sample_path = "saves/sample.txt"
+dict_path = "saves/commit_dict.txt"
+bow_vectors_path = "saves/vectors.npy"
+matrix_length_path = "saves/matrix.npy"
 clang_dll_path = 'C:/Program Files/LLVM/bin/libclang.dll'
 
 # clustering

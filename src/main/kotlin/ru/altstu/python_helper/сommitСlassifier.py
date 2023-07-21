@@ -1,28 +1,37 @@
 import numpy as np
+from sklearn.metrics import accuracy_score
+
 import config
 import clang.cindex
 from clang.cindex import Cursor, CursorKind
 from git import Commit, Repo
-from pycparser import c_parser, c_ast, CParser
 from typing import Tuple, Any, List, Callable
 from tqdm import tqdm
 from pulearn import ElkanotoPuClassifier
 from sklearn.svm import SVC
 
+clang.cindex.Config.set_library_file(config.clang_dll_path)
 
 class CommitClassifier:
     def __init__(self):
         self._csv = SVC(C=10, kernel='rbf', gamma=0.4, probability=True)
         self._classifier = ElkanotoPuClassifier(estimator=self._csv, hold_out_ratio=0.2)
 
-    def fit(self, bugfix_sample: np.ndarray[int], undefined_sample: np.ndarray[int]) -> None:
+    def fit(self, bugfix_sample: np.ndarray[np.ndarray[int]], undefined_sample: np.ndarray[np.ndarray[int]]) -> None:
         X = np.concatenate((bugfix_sample, undefined_sample))
-        Y = np.concatenate((np.ones(len(bugfix_sample)), np.ones(len(undefined_sample))))
+        Y = np.concatenate((np.ones(len(bugfix_sample)), np.zeros(len(undefined_sample))))
         self._classifier.fit(X, Y)
+
+    def is_bugfix_commit(self, commit: Commit, vectorize: Callable[[Commit], np.ndarray[int]] = None) -> bool:
+        if vectorize is None:
+            vectorizer = CommitVectorizer()
+            vectorize = vectorizer.get_vector_from_commit
+
+        vector = vectorize(commit)
+        return self._classifier.predict([vector])[0] == 1
 
 class CommitVectorizer:
     def __init__(self):
-        clang.cindex.Config.set_library_file(config.clang_dll_path)
         self._white_sample = self._init_sample(config.white_path)
         self._gray_sample = self._init_sample(config.grey_path)
 
@@ -43,22 +52,25 @@ class CommitVectorizer:
 
         return self._white_sample, self._gray_sample
 
-    def get_matrix_from_commits(self, repo: Repo, bugfix_sample: List[str], undefined_sample: List[str]) -> Tuple[np.ndarray[np.ndarray[int]], np.ndarray[np.ndarray[int]]]:
+    def get_matrix_from_commits(self, repo: Repo, bugfix_sample: List[str], undefined_sample: List[str]) -> Tuple[
+        np.ndarray[np.ndarray[int]], np.ndarray[np.ndarray[int]]]:
         if config.is_readable(config.white_vectors_path) and config.is_readable(config.gray_vectors_path):
             white_vectors = np.load(config.white_vectors_path)
             gray_vectors = np.load(config.gray_vectors_path)
         else:
-            white_vectors = np.array(map(lambda x: self.get_vector_from_commit(repo, x), bugfix_sample))
-            gray_vectors = np.array(list(map(lambda x: self.get_vector_from_commit(repo, x), undefined_sample)))
+            white_vectors = np.vstack(list(map(lambda x: self.get_vector_from_hash(repo, x), bugfix_sample)))
+            gray_vectors = np.vstack(list(map(lambda x: self.get_vector_from_hash(repo, x), undefined_sample)))
 
         config.save_np(config.white_vectors_path, white_vectors)
         config.save_np(config.gray_vectors_path, gray_vectors)
 
         return white_vectors, gray_vectors
 
-    def get_vector_from_commit(self, repo: Repo, commit_hash: str) -> np.ndarray[int]:
+    def get_vector_from_hash(self, repo: Repo, commit_hash: str)-> np.ndarray[int]:
+        return self.get_vector_from_commit(repo.commit(commit_hash))
+
+    def get_vector_from_commit(self, commit: Commit) -> np.ndarray[int]:
         vector = np.zeros(31)
-        commit = repo.commit(commit_hash)
 
         addition_strings = self._pattern_in_commit(commit, lambda string: string.startswith('+'))
         deletion_strings = self._pattern_in_commit(commit, lambda string: string.startswith('-'))
@@ -80,7 +92,6 @@ class CommitVectorizer:
         vector[30] = int(any(word in commit.message for word in config.spelling_words))
         return vector
 
-
     @staticmethod
     def _init_sample(file_path: str) -> List[str]:
         if config.is_readable(file_path):
@@ -93,7 +104,7 @@ class CommitVectorizer:
                len(self._white_sample) < config.white_sample_len
 
     def _is_undefined_commit_for_sample(self, commit: Commit) -> bool:
-        return len(commit.parents) == 1 and len(self._gray_sample) < config.white_sample_len
+        return len(commit.parents) == 1 and len(self._gray_sample) < config.grey_sample_len
 
     def _is_samples_complete(self) -> bool:
         return len(self._white_sample) >= config.white_sample_len and len(self._gray_sample) >= config.grey_sample_len

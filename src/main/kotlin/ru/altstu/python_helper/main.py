@@ -1,21 +1,16 @@
 import sys
-
-from pycparser import CParser
-from pycparser.c_lexer import CLexer
-from pycparser.ply.lex import TOKEN
-
 sys.setrecursionlimit(20000)
 
 import numpy as np
 from sklearn.manifold import TSNE
 import git
 import config
-from CommitTokenizer import TextTokenizer
+from CommitTokenizer import TextTokenizer, CommitSmaple
 from MatrixLenGenerator import create_matrix, get_mean
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 import matplotlib.pyplot as plt
 from collections import Counter
-from сommitСlassifier import CommitVectorizer
+from сommitСlassifier import CommitVectorizer, CommitClassifier
 
 
 def cluster_to_string(messages, data, number):
@@ -35,15 +30,24 @@ def get_metric(tree, count_messages, count_clasters, treshold):
 
 
 if __name__ == '__main__':
-    tt = TextTokenizer()
     repo = git.Repo(config.repo_path)
-    classifier = CommitVectorizer()
+    vectorizer = CommitVectorizer()
 
-    white_samples, grey_samples = classifier.make_samples(repo)
-    white_vectors = list(map(lambda x: classifier.get_vector_from_commit(repo, x), white_samples))
-    gray_vectors = map(lambda x: classifier.get_vector_from_commit(repo, x), grey_samples)
+    white_samples, grey_samples = vectorizer.make_samples(repo)
+    white_vectors, gray_vectors = vectorizer.get_matrix_from_commits(repo, white_samples, grey_samples)
 
-    vectors = tt.rep_to_vectors(repo)
+    classifire = CommitClassifier()
+    classifire.fit(white_vectors, gray_vectors)
+
+    result_sample = CommitSmaple(
+        repo,
+        commit_filter=classifire.is_bugfix_commit,
+        folder=config.git_file_path,
+        max_len=config.max_commit
+    )
+
+    tt = TextTokenizer()
+    vectors = tt.sample_to_vectors(result_sample.lsit)
     matrix = create_matrix(vectors)
     Z = linkage(matrix, 'single', metric='average')
 

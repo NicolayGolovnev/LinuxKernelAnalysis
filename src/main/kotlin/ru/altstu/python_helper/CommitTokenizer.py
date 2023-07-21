@@ -1,12 +1,72 @@
 import os
+import time
 
 import numpy as np
 import config
 from nltk.stem import WordNetLemmatizer
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, ENGLISH_STOP_WORDS
 import nltk
 from tqdm import tqdm
-import csv
+from git import Commit, Repo
+from typing import Callable, Any, Union, Tuple, Iterable
+from datetime import datetime
+
+
+class CommitSmaple:
+    def __init__(self,
+                 repo: Repo,
+                 time_fragment: Union[Tuple[datetime, datetime], None] = None,
+                 commit_filter: Union[Callable[[Commit], bool], None] = None,
+                 folder: str = "/",
+                 max_len: int = 1000000,
+                 ):
+        self._repo = repo
+        self._result_list = None
+
+        self._commit_filter = commit_filter
+        if self._commit_filter is None:
+            self._commit_filter = self._mark_word_method
+
+        self._time = time_fragment
+        if self._time is None:
+            self._time = (datetime.min, datetime.now())
+        self._folder = folder
+        self._max_len = max_len
+
+    @property
+    def lsit(self) -> Iterable[Commit]:
+        if self._result_list is not None:
+            return self._result_list
+        if config.is_readable(config.result_sample_path):
+            hashes = np.genfromtxt(config.result_sample_path, dtype=str)
+            self._result_list = [self._repo.commit(hash_commit) for hash_commit in hashes]
+            return self._result_list
+        self._result_list = []
+        for commit in tqdm(self._repo.iter_commits(paths=self._folder), desc='Form Sample'):
+            if self._is_coommit_for_sample(commit):
+                self._result_list.append(commit)
+            if len(self._result_list) >= self._max_len:
+                break
+        config.save_list(config.result_sample_path, self._result_list)
+        return self._result_list
+
+    def _is_coommit_for_sample(self, commit: Commit) -> bool:
+        return self._is_commit_in_time_interval(commit) and \
+               self._is_not_merge_commit(commit) and \
+               self._commit_filter(commit)
+
+    def _is_commit_in_time_interval(self, commit: Commit) -> bool:
+        return self._time[0].date() < commit.committed_datetime.date() < self._time[1].date()
+
+    def _is_not_merge_commit(self, commit: Commit) -> bool:
+        return len(commit.parents) == 1
+
+    def _mark_word_method(self, commit: Commit) -> bool:
+        fix_marks = ['fix']
+        for mark in fix_marks:
+            if mark in commit.message.lower():
+                return True
+        return False
 
 
 class TextTokenizer():
@@ -16,15 +76,15 @@ class TextTokenizer():
         self.count_vectorizer = CountVectorizer(
             min_df=2,
             max_df=1.0,
-            stop_words=config.stop_words
+            stop_words='english'
         )
 
-        self.tfidf_transformer = TfidfTransformer(use_idf=False,
+        self.tfidf_transformer = TfidfTransformer(use_idf=True,
                                                   norm=None,
                                                   smooth_idf=False,
                                                   sublinear_tf=False)
 
-    def vectorize(self, tokens_colection):
+    def vectorize(self, tokens_colection) -> np.ndarray[np.ndarray[float]]:
         tokens_colection = [list(x) for x in set(tuple(x) for x in tokens_colection)]
         if config.use_save_file and os.path.exists(config.bow_vectors_path):
             bow_vectors = np.load(config.bow_vectors_path)
@@ -52,17 +112,9 @@ class TextTokenizer():
         N_lemmas = np.array([word for word, pos in pos_tags])
         return N_lemmas
 
-    def commit_to_units(self, commit):
-        fix_marks = ['fix']
-        units = []
-        if not commit.message.startswith("Merge"):
-            for mark in fix_marks:
-                if mark in commit.message.lower():
-                    units.append(self.get_message_info(commit.message.lower()))
-                    break
-        return units
 
-    def get_message_info(self, message):
+    @staticmethod
+    def _get_message_info(message):
         rows = message.split("\n")
         last_row_index = len(rows) - 1
         while last_row_index != 0:
@@ -74,26 +126,26 @@ class TextTokenizer():
         info = "\n".join(rows[:last_row_index + 1])
         return info
 
+    def _mark_word_method(self, commit: Commit) -> bool:
+        fix_marks = ['fix']
+        for mark in fix_marks:
+            if mark in commit.message.lower():
+                return True
+        return False
 
-    def rep_to_vectors(self, repo):
+    def sample_to_vectors(self, sample: Iterable[Commit]) -> np.ndarray[np.ndarray[float]]:
         messages = []
-        if config.use_save_file and os.path.exists(config.dict_path):
+        if config.is_readable(config.dict_path):
             self.dict = np.genfromtxt(config.dict_path, dtype=str)
+        else:
+            for commit in tqdm(sample, desc='Commit Processing'):
+                messages.append(
+                    self.unit_to_token(
+                        self._get_message_info(commit.message.lower())
+                    )
+                )
 
-        if not config.use_save_file or not os.path.exists(config.dict_path):
-            count = 0
-            for commit in tqdm(repo.iter_commits(paths=config.git_file_path), desc='Commit Processing'):
-                #if len(commit.parents) == 1:
-                #    addition_in_commit(commit)
-                messages += [self.unit_to_token(unit) for unit in self.commit_to_units(commit)]
-                count += 1
-                if count > config.max_commit:
-                    break
-
-
+        # TODO выдернуть чтение из файла из функции векторизации
         vectors = self.vectorize(messages)
-
-        if config.use_save_file:
-            np.savetxt(config.dict_path, self.dict, delimiter="\n", fmt="%s", encoding='utf-8')
-
+        config.save_list(config.dict_path, self.dict.tolist())
         return vectors

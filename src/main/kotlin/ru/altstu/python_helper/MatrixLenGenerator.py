@@ -1,4 +1,5 @@
 import os
+from typing import Iterable
 
 import config
 import numpy as np
@@ -12,7 +13,7 @@ def cos_distance(one_message, other_message):
 def get_mean(data):
     return np.mean(data, axis=0)
 
-def create_matrix(data: list):
+def create_matrix(data : Iterable[Iterable[float]]):
     size = len(data)
     matrix = np.zeros((size*(size-1)//2))
     if config.use_save_file and os.path.exists(config.matrix_length_path):
