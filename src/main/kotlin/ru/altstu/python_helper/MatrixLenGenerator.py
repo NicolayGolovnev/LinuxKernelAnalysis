@@ -19,7 +19,7 @@ def create_matrix(data : Iterable[Iterable[float]]):
     if config.use_save_file and os.path.exists(config.matrix_length_path):
         matrix = np.load(config.matrix_length_path)
     else:
-        with tqdm(total= size * (size - 1) // 2, desc='Distance counting') as pbar:
+        with tqdm(total=size * (size - 1) // 2, desc='Distance counting') as pbar:
             for i in range(size):
                 for j in range(i+1, size):
                     cur_distance = cos_distance(data[i], data[j])

@@ -12,7 +12,7 @@ from typing import Callable, Any, Union, Tuple, Iterable
 from datetime import datetime
 
 
-class CommitSmaple:
+class CommitSample:
     def __init__(self,
                  repo: Repo,
                  time_fragment: Union[Tuple[datetime, datetime], None] = None,
@@ -34,7 +34,7 @@ class CommitSmaple:
         self._max_len = max_len
 
     @property
-    def lsit(self) -> Iterable[Commit]:
+    def list(self) -> Iterable[Commit]:
         if self._result_list is not None:
             return self._result_list
         if config.is_readable(config.result_sample_path):
@@ -42,11 +42,13 @@ class CommitSmaple:
             self._result_list = [self._repo.commit(hash_commit) for hash_commit in hashes]
             return self._result_list
         self._result_list = []
-        for commit in tqdm(self._repo.iter_commits(paths=self._folder), desc='Form Sample'):
-            if self._is_coommit_for_sample(commit):
-                self._result_list.append(commit)
-            if len(self._result_list) >= self._max_len:
-                break
+        with tqdm(total=self._max_len, desc='Form Sample') as pbar:
+            for commit in self._repo.iter_commits(paths=self._folder):
+                if self._is_coommit_for_sample(commit):
+                    self._result_list.append(commit)
+                    pbar.update(1)
+                if len(self._result_list) >= self._max_len:
+                    break
         config.save_list(config.result_sample_path, self._result_list)
         return self._result_list
 
@@ -85,20 +87,15 @@ class TextTokenizer():
                                                   sublinear_tf=False)
 
     def vectorize(self, tokens_colection) -> np.ndarray[np.ndarray[float]]:
-        tokens_colection = [list(x) for x in set(tuple(x) for x in tokens_colection)]
-        if config.use_save_file and os.path.exists(config.bow_vectors_path):
+        if config.is_readable(config.bow_vectors_path):
             bow_vectors = np.load(config.bow_vectors_path)
         else:
             bow_vectors = self.count_vectorizer.fit_transform([' '.join(d) for d in tokens_colection])
             self.dict = self.count_vectorizer.get_feature_names_out()
-            if config.use_save_file:
-                np.save(config.bow_vectors_path, bow_vectors.toarray())
+            config.save_np(config.bow_vectors_path, bow_vectors.toarray())
 
         idfs_vecors = self.tfidf_transformer.fit_transform(bow_vectors)
-        norms = np.linalg.norm(idfs_vecors.toarray(), axis=1)
-        vectors = idfs_vecors.toarray()[norms != 0]
-
-        return np.unique(vectors, axis=0)
+        return idfs_vecors.toarray()
 
     def vector_to_message(self, vector):
         sorted_indexes = np.argsort(vector)[::-1]
@@ -109,9 +106,8 @@ class TextTokenizer():
         lemmatizer = WordNetLemmatizer()
         raw_lemmas = [lemmatizer.lemmatize(token) for token in nltk.word_tokenize(unit)]
         pos_tags = nltk.pos_tag(raw_lemmas)
-        N_lemmas = np.array([word for word, pos in pos_tags])
+        N_lemmas = np.array([word for word, pos in pos_tags if pos not in config.POS_black_list])
         return N_lemmas
-
 
     @staticmethod
     def _get_message_info(message):

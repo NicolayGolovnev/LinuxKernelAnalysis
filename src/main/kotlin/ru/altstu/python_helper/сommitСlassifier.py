@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 from sklearn.metrics import accuracy_score
 
@@ -18,9 +20,14 @@ class CommitClassifier:
         self._classifier = ElkanotoPuClassifier(estimator=self._csv, hold_out_ratio=0.2)
 
     def fit(self, bugfix_sample: np.ndarray[np.ndarray[int]], undefined_sample: np.ndarray[np.ndarray[int]]) -> None:
-        X = np.concatenate((bugfix_sample, undefined_sample))
-        Y = np.concatenate((np.ones(len(bugfix_sample)), np.zeros(len(undefined_sample))))
-        self._classifier.fit(X, Y)
+        if config.is_readable(config.model_path):
+            with open(config.model_path, 'rb') as f:
+                self._classifier = pickle.load(f)
+        else:
+            X = np.concatenate((bugfix_sample, undefined_sample))
+            Y = np.concatenate((np.ones(len(bugfix_sample)), np.zeros(len(undefined_sample))))
+            self._classifier.fit(X, Y)
+            config.save_object(config.model_path,self._classifier)
 
     def is_bugfix_commit(self, commit: Commit, vectorize: Callable[[Commit], np.ndarray[int]] = None) -> bool:
         if vectorize is None:
@@ -123,24 +130,30 @@ class CommitVectorizer:
 
     @staticmethod
     def _pattern_in_commit(commit: Commit, filter_function: Callable[[str], bool]) -> str:
-        changes = commit.parents[0].diff(commit, create_patch=True)
-        additions_rows = []
-        for change in changes:
-            raw_commit = change.diff.decode("utf-8")
-            rows = raw_commit.splitlines()[1:]
-            rows = filter(filter_function, rows)
-            rows = map(lambda a: a[1:], rows)
-            additions_rows += rows
-        additions = "\n".join(additions_rows)
-        return additions
+        try:
+            changes = commit.parents[0].diff(commit, create_patch=True)
+            additions_rows = []
+            for change in changes:
+                raw_commit = change.diff.decode("utf-8")
+                rows = raw_commit.splitlines()[1:]
+                rows = filter(filter_function, rows)
+                rows = map(lambda a: a[1:], rows)
+                additions_rows += rows
+            additions = "\n".join(additions_rows)
+            return additions
+        except:
+            return ""
 
     @staticmethod
     def _count_hunks(commit: Commit):
         changes = commit.parents[0].diff(commit, create_patch=True)
         hunks_count = 0
-        for change in changes:
-            hunks_count += change.diff.decode("utf-8").count('@@')
-        return hunks_count
+        try:
+            for change in changes:
+                hunks_count += change.diff.decode("utf-8").count('@@')
+            return hunks_count
+        except:
+            return 0
 
     @staticmethod
     def _get_ast(code: str) -> clang.cindex.TranslationUnit:
