@@ -1,0 +1,34 @@
+{
+  "repo_path": "D:/linux/linux/.git",
+  "white_sample_len": 2000,
+  "grey_sample_len": 8000,
+  "white_sample_words": ["bugzilla"],
+  "functionality_words": [
+    "robust",
+    "unnecessary",
+    "improve",
+    "future",
+    "anticipation",
+    "superfluous",
+    "remove",
+    "unused"
+  ],
+  "bug_words": [
+    "bug",
+    "error",
+    "vulnerability",
+    "issue"],
+  "POS_black_list": [
+    "CD",
+    "RP",
+    "PRP"
+  ],
+
+  "use_save_file": true,
+  "override_file": false,
+  "clang_dll_path": "C:/Program Files/LLVM/bin/libclang.dll",
+
+
+  "count_clusters_in_sample": 16,
+  "accuracity_treshold": 1000
+}

@@ -1,0 +1,14 @@
+{
+  "input_path": "input",
+  "result_path": "result",
+  "white_path": "saves/white_commits.txt",
+  "grey_path": "saves/grey_commits.txt",
+  "white_vectors_path": "saves/white_vectors.npy",
+  "gray_vectors_path": "saves/gray_vectors.npy",
+  "model_path": "saves/model.pickle",
+  "result_sample_path": "sample.txt",
+  "dict_path": "commit_dict.txt",
+  "bow_vectors_path": "vectors.npy",
+  "matrix_length_path": "matrix.npy",
+  "labels_path": "labels.npy"
+}
