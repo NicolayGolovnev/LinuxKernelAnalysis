@@ -7,8 +7,9 @@
   "gray_vectors_path": "saves/gray_vectors.npy",
   "model_path": "saves/model.pickle",
   "result_sample_path": "sample.txt",
-  "dict_path": "commit_dict.txt",
+  "dict_path": "commit_dict.npy",
   "bow_vectors_path": "vectors.npy",
   "matrix_length_path": "matrix.npy",
-  "labels_path": "labels.npy"
+  "labels_path": "labels.npy",
+  "documents_path": "documents.txt"
 }

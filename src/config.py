@@ -14,12 +14,17 @@ class DirectoryAnalysisData:
 class FileNameConfig:
     input_path: str
     result_path: str
-    clang_dll_path: str
     white_path: str
     grey_path: str
-    white_vectors_path = str
-    gray_vectors_path = str
-    model_path = str
+    white_vectors_path: str
+    gray_vectors_path: str
+    bow_vectors_path: str
+    dict_path: str
+    labels_path: str
+    result_sample_path: str
+    matrix_length_path: str
+    model_path: str
+    documents_path: str
 
 @dataclass
 class MainConfig:
@@ -32,6 +37,7 @@ class MainConfig:
     functionality_words: List[str]
     bug_words: List[str]
     spelling_words: List[str]
+    stop_words: List[str]
 
     # vectorization
     POS_black_list: List[str]
@@ -42,7 +48,7 @@ class MainConfig:
     clang_dll_path: str
 
     # clustering
-    count_clusters_in_sample = 16
-    accuracity_treshold = 1000
+    count_clusters_in_sample: int
+    accuracity_treshold: int
 
 

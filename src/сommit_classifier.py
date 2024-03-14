@@ -2,7 +2,6 @@ import pickle
 
 import numpy as np
 
-import config
 import clang.cindex
 from clang.cindex import CursorKind
 from git import Commit, Repo
@@ -11,38 +10,49 @@ from tqdm import tqdm
 from pulearn import ElkanotoPuClassifier
 from sklearn.svm import SVC
 
-clang.cindex.Config.set_library_file(config.clang_dll_path)
+from config import FileNameConfig, MainConfig
+from flie_handlers.directory_iterator import DirectoryContextIterator
+from flie_handlers.sample_data import FileIOManager
+
 
 class CommitClassifier:
-    def __init__(self):
+    def __init__(self, io_manager: FileIOManager, config: MainConfig, file_names: FileNameConfig):
         self._csv = SVC(C=10, kernel='rbf', gamma=0.4, probability=True)
         self._classifier = ElkanotoPuClassifier(estimator=self._csv, hold_out_ratio=0.2)
+        self.io_manager = io_manager
+        self.file_names = file_names
+        self.config = config
 
     def fit(self, bugfix_sample: np.ndarray[np.ndarray[int]], undefined_sample: np.ndarray[np.ndarray[int]]) -> None:
-        if config.is_readable(config.model_path):
-            with open(config.model_path, 'rb') as f:
-                self._classifier = pickle.load(f)
-        else:
-            X = np.concatenate((bugfix_sample, undefined_sample))
-            Y = np.concatenate((np.ones(len(bugfix_sample)), np.zeros(len(undefined_sample))))
-            self._classifier.fit(X, Y)
-            config.save_object(config.model_path,self._classifier)
+        self._classifier = self.io_manager.subload(
+            self.file_names.model_path, lambda: self._fit(bugfix_sample, undefined_sample)
+        )
+
+    def _fit(self, bugfix_sample: np.ndarray[np.ndarray[int]], undefined_sample: np.ndarray[np.ndarray[int]]):
+        X = np.concatenate((bugfix_sample, undefined_sample))
+        Y = np.concatenate((np.ones(len(bugfix_sample)), np.zeros(len(undefined_sample))))
+        self._classifier.fit(X, Y)
+        return self._classifier
 
     def is_bugfix_commit(self, commit: Commit, vectorize: Callable[[Commit], np.ndarray[int]] = None) -> bool:
         if vectorize is None:
-            vectorizer = CommitVectorizer()
+            vectorizer = CommitVectorizer(self.io_manager, self.config, self.file_names)
             vectorize = vectorizer.get_vector_from_commit
 
         vector = vectorize(commit)
         return self._classifier.predict([vector])[0] == 1
 
+
 class CommitVectorizer:
-    def __init__(self):
-        self._white_sample = self._init_sample(config.white_path)
-        self._gray_sample = self._init_sample(config.grey_path)
+    def __init__(self, io_manager: FileIOManager, config: MainConfig, name_config: FileNameConfig):
+        self.io = io_manager
+        self.name_config = name_config
+        self.config = config
+        self._white_sample = self._init_sample(self.name_config.white_path)
+        self._gray_sample = self._init_sample(self.name_config.grey_path)
 
     def make_samples(self, repo: Repo) -> Tuple[List[str], List[str]]:
-        with tqdm(config.white_sample_len + config.grey_sample_len, desc='Make samples') as pbar:
+        with tqdm(self.config.white_sample_len + self.config.grey_sample_len, desc='Make samples') as pbar:
             for commit in repo.iter_commits():
                 if self._is_bug_fix_commit_for_sample(commit):
                     self._white_sample.append(str(commit))
@@ -53,26 +63,30 @@ class CommitVectorizer:
                 if self._is_samples_complete():
                     break
 
-        config.save_list(config.white_path, self._white_sample)
-        config.save_list(config.grey_path, self._gray_sample)
+        self.io.save(self.name_config.white_path, self._white_sample)
+        self.io.save(self.name_config.grey_path, self._gray_sample)
 
         return self._white_sample, self._gray_sample
 
     def get_matrix_from_commits(self, repo: Repo, bugfix_sample: List[str], undefined_sample: List[str]) -> Tuple[
         np.ndarray[np.ndarray[int]], np.ndarray[np.ndarray[int]]]:
-        if config.is_readable(config.white_vectors_path) and config.is_readable(config.gray_vectors_path):
-            white_vectors = np.load(config.white_vectors_path)
-            gray_vectors = np.load(config.gray_vectors_path)
+        if self.io.is_readable(
+                self.name_config.white_vectors_path
+        ) and self.io.is_readable(
+            self.name_config.gray_vectors_path
+        ):
+            white_vectors = np.load(self.name_config.white_vectors_path)
+            gray_vectors = np.load(self.name_config.gray_vectors_path)
         else:
             white_vectors = np.vstack(list(map(lambda x: self.get_vector_from_hash(repo, x), bugfix_sample)))
             gray_vectors = np.vstack(list(map(lambda x: self.get_vector_from_hash(repo, x), undefined_sample)))
 
-        config.save_np(config.white_vectors_path, white_vectors)
-        config.save_np(config.gray_vectors_path, gray_vectors)
+        self.io.save(self.name_config.white_vectors_path, white_vectors)
+        self.io.save(self.name_config.gray_vectors_path, gray_vectors)
 
         return white_vectors, gray_vectors
 
-    def get_vector_from_hash(self, repo: Repo, commit_hash: str)-> np.ndarray[int]:
+    def get_vector_from_hash(self, repo: Repo, commit_hash: str) -> np.ndarray[int]:
         return self.get_vector_from_commit(repo.commit(commit_hash))
 
     def get_vector_from_commit(self, commit: Commit) -> np.ndarray[int]:
@@ -93,27 +107,26 @@ class CommitVectorizer:
                                                    CursorKind.BINARY_OPERATOR)
         vector[18:23] = self._get_vector_of_struct(addition, deletion, CursorKind.VAR_DECL, CursorKind.FUNCTION_DECL)
         vector[23:28] = self._get_vector_of_struct(addition, deletion, CursorKind.CALL_EXPR)
-        vector[28] = int(any(word in commit.message for word in config.functionality_words))
-        vector[29] = int(any(word in commit.message for word in config.bug_words))
-        vector[30] = int(any(word in commit.message for word in config.spelling_words))
+        vector[28] = int(any(word in commit.message for word in self.config.functionality_words))
+        vector[29] = int(any(word in commit.message for word in self.config.bug_words))
+        vector[30] = int(any(word in commit.message for word in self.config.spelling_words))
         return vector
 
-    @staticmethod
-    def _init_sample(file_path: str) -> List[str]:
-        if config.is_readable(file_path):
+    def _init_sample(self, file_path: str) -> List[str]:
+        if self.io.is_readable(file_path):
             return np.genfromtxt(file_path, dtype=str).tolist()
         return []
 
     def _is_bug_fix_commit_for_sample(self, commit: Commit) -> bool:
         return len(commit.parents) == 1 and \
-               any(word in commit.message for word in config.white_sample_words) and \
-               len(self._white_sample) < config.white_sample_len
+            any(word in commit.message for word in self.config.white_sample_words) and \
+            len(self._white_sample) < self.config.white_sample_len
 
     def _is_undefined_commit_for_sample(self, commit: Commit) -> bool:
-        return len(commit.parents) == 1 and len(self._gray_sample) < config.grey_sample_len
+        return len(commit.parents) == 1 and len(self._gray_sample) < self.config.grey_sample_len
 
     def _is_samples_complete(self) -> bool:
-        return len(self._white_sample) >= config.white_sample_len and len(self._gray_sample) >= config.grey_sample_len
+        return len(self._white_sample) >= self.config.white_sample_len and len(self._gray_sample) >= self.config.grey_sample_len
 
     def _get_vector_of_struct(self, addition: clang.cindex.TranslationUnit, deletion: clang.cindex.TranslationUnit,
                               *object_types: Any) -> np.ndarray[int]:

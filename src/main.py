@@ -1,25 +1,35 @@
 import os
-import sys
 from typing import List, Callable
 
+import clang
+from clang.cindex import Config
+from git import Repo
+
+from clusterizers.tree_clusterizer import TreeClusterizer, DBSCANClusterizer
+from documenters.comment_text_tokenizer import CommitTextDocumenter
+from flie_handlers.sample_data import FileIOManager
+from matrix_counter.lambda_matrix_counter import LambdaMatrixCounter
+from samplers.sampler import Sampler
 from thresholdFinder import ThresholdFinder
 
 import numpy as np
 import git
 import json
-from commitTokenizer import TextTokenizer, CommitSample
-from matrixLenGenerator import DistanceMatrixCounter
-from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.cluster.hierarchy import fcluster
 from collections import Counter
-from сommitСlassifier import CommitVectorizer, CommitClassifier
-from config import DirectoryAnalysisData
+from config import DirectoryAnalysisData, FileNameConfig, MainConfig
 from scipy.spatial.distance import cosine
+
+from vectorizers.tf_idf_vectorizer import TfIdfVectorizer
+from work_handler.main_handler import MainHandler
+from work_handler.paper_result_handler import PaperResultHandler
+from work_handler.work_handler import WorkHandler
+from сommit_classifier import CommitVectorizer, CommitClassifier
 
 
 def cluster_to_string(messages, data, number):
     mean = np.mean(np.array([msg for i, msg in enumerate(messages) if data[i] == number]), axis=0)
     return mean
-
 
 def get_metric(tree, count_messages, count_clasters, treshold):
     labels = fcluster(tree, treshold, criterion='distance')
@@ -30,61 +40,16 @@ def get_metric(tree, count_messages, count_clasters, treshold):
         1] / counter[0][1] * 100
 
 
-def get_filter_method():
-    vectorizer = CommitVectorizer()
+def get_filter_method(repo: Repo, io_manager: FileIOManager, config: MainConfig, name_config: FileNameConfig):
+    vectorizer = CommitVectorizer(io_manager, config, name_config)
     white_samples, grey_samples = vectorizer.make_samples(repo)
     white_vectors, gray_vectors = vectorizer.get_matrix_from_commits(repo, white_samples, grey_samples)
-    classifire = CommitClassifier()
+    classifire = CommitClassifier(io_manager, config, name_config)
     classifire.fit(white_vectors, gray_vectors)
     return classifire.is_bugfix_commit
 
 
-
-class TestFileManager:
-
-    def __init__(self, tests_data: List[DirectoryAnalysisData]):
-        self.__root_dir: str = os.getcwd()
-        self.tests_data: List[DirectoryAnalysisData] = tests_data
-
-    def full_iteration(self, iteration_func: Callable[[DirectoryAnalysisData], None]) -> None:
-        for test_data in self.tests_data:
-            self._set_dir(test_data.name)
-            iteration_func(test_data)
-            self._back_dir()
-
-    def _back_dir(self) -> None:
-        os.chdir(self.__root_dir)
-
-    def _set_dir(self, name: str) -> None:
-        current_folder = f"{config.result_path}/{name}"
-        if not os.path.exists(current_folder):
-            os.mkdir(current_folder)
-        os.chdir(current_folder)
-
-
-def perfome_test(analysisData: DirectoryAnalysisData):
-    result_sample = CommitSample(
-        repo,
-        folder=analysisData.path,
-        max_len=analysisData.max_commit,
-        commit_filter=filter_method
-    )
-
-    tt = TextTokenizer()
-    vectors = tt.sample_to_vectors(result_sample.list)
-    mc = DistanceMatrixCounter(cosine)
-
-    matrix = mc.create_matrix(vectors)
-
-    Z = linkage(matrix, 'single', metric='average')
-
-    tf = ThresholdFinder(Z, len(vectors), config.count_clusters_in_sample)
-    threshold = tf.find_threshold()
-
-    labels = fcluster(Z, threshold, criterion='distance')
-    config.save_np(config.labels_path, labels)
-
-def read_input_data_from_file(path:str):
+def read_input_data_from_file(config: FileNameConfig, path:str):
     with open(f"{config.input_path}/{path}") as json_config:
         json_data = json.load(json_config)
     return DirectoryAnalysisData(**json_data)
@@ -92,13 +57,60 @@ def read_input_data_from_file(path:str):
 
 
 if __name__ == '__main__':
+    with open("file_names.json") as json_config:
+        file_names: FileNameConfig = FileNameConfig(**json.load(json_config))
+
+    with open("config.json") as json_config:
+        config: MainConfig = MainConfig(**json.load(json_config))
+
+    file_io = FileIOManager()
+    Config.set_library_path(config.clang_dll_path)
 
     repo = git.Repo(config.repo_path)
-    filter_method = get_filter_method()
 
-    input_data = [read_input_data_from_file(path) for path in  os.listdir(config.input_path)]
-    tfm = TestFileManager(input_data)
-    tfm.full_iteration(perfome_test)
+
+    tasklist = [read_input_data_from_file(file_names, path) for path in os.listdir(file_names.input_path)]
+    doc = CommitTextDocumenter(config.stop_words, config.POS_black_list)
+    tf_idf = TfIdfVectorizer()
+    cos_matrix = LambdaMatrixCounter(cosine)
+    clusterizer = TreeClusterizer()
+    dbsan_clusterizer = DBSCANClusterizer()
+
+    wh = WorkHandler(
+        documenter=doc,
+        vectorizer=tf_idf,
+        matrix_counter=cos_matrix,
+        clasterizer=dbsan_clusterizer,
+        file_io=file_io,
+        file_names=file_names
+    )
+
+    rh = PaperResultHandler(
+        repo=repo,
+        file_io=file_io,
+        file_names=file_names
+    )
+
+    #filtr_method = get_filter_method(repo, file_io, config, file_names)
+    mh = MainHandler(
+        work_handler=wh,
+        io_manager=file_io,
+        file_names=file_names,
+        commit_filter=None
+    )
+
+    mh_r = MainHandler(
+        work_handler=rh,
+        io_manager=file_io,
+        file_names=file_names,
+        commit_filter=None
+    )
+
+
+    mh.handle(repo, tasklist)
+    #mh_r.handle(repo, tasklist)
+
+
 
 
 
