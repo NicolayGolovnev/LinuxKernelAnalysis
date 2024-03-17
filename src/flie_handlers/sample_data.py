@@ -7,7 +7,6 @@ from numpy import ndarray
 import numpy as np
 
 
-
 @dataclass
 class SampleData:
     word_dictionary: List[str]
@@ -23,7 +22,7 @@ class FileIOManager:
         if not FileIOManager.is_readable(path):
             if isinstance(data, ndarray):
                 np.save(path, data)
-            elif isinstance(data, list):
+            elif isinstance(data, list) and isinstance(data[0], str):
                 np.savetxt(path, data, delimiter="\n", fmt="%s", encoding='utf-8')
             else:
                 with open(path, 'wb') as f:
@@ -31,7 +30,7 @@ class FileIOManager:
 
     @staticmethod
     def _read_text(path: str) -> List[str]:
-        return list(np.genfromtxt(path, dtype=str, delimiter='\n', invalid_raise = False, encoding='utf-8'))
+        return list(np.genfromtxt(path, dtype=str, delimiter='\n', invalid_raise=False, encoding='utf-8'))
 
     @staticmethod
     def _read_npy(path: str) -> ndarray:
@@ -47,6 +46,7 @@ class FileIOManager:
         '.txt': _read_text,
         '.pickle': _read_object
     }
+
     @staticmethod
     def load(path: str) -> Any:
         _, file_extension = os.path.splitext(path)

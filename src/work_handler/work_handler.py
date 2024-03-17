@@ -26,7 +26,10 @@ class WorkHandler:
         self.file_names = file_names
 
     def handle(self, sample: Sampler):
-        sample = self.file_io.subload(self.file_names.result_sample_path, lambda: sample.sample())
+        sample_hash_list = self.file_io.load_if_exist(self.file_names.result_sample_path)
+        sample = sample.sample(sample_hash_list)
+        self.file_io.save(self.file_names.result_sample_path, [commit.hash for commit in sample])
+
         docs = self.file_io.subload(self.file_names.documents_path, lambda: self.documenter.docs(sample))
 
         vectors = self.file_io.load_if_exist(self.file_names.bow_vectors_path)

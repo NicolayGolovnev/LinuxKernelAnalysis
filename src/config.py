@@ -25,6 +25,7 @@ class FileNameConfig:
     matrix_length_path: str
     model_path: str
     documents_path: str
+    load_commits: str
 
 @dataclass
 class MainConfig:

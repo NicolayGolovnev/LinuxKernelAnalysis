@@ -58,6 +58,7 @@ class ResultHandler:
         self.file_names = file_names
 
     def handle(self, sample: Sampler):
+        #TODO Нужно поченить подгрузку семплера и перенести подгруз в него
         sample = self.file_io.load(self.file_names.result_sample_path)
         vectors = self.file_io.load(self.file_names.bow_vectors_path)
         hash_to_vectors = {hash_commit: vector for hash_commit, vector in zip(sample, vectors)}

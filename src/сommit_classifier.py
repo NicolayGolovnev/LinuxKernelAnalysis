@@ -1,5 +1,3 @@
-import pickle
-
 import numpy as np
 
 import clang.cindex
@@ -11,7 +9,6 @@ from pulearn import ElkanotoPuClassifier
 from sklearn.svm import SVC
 
 from config import FileNameConfig, MainConfig
-from flie_handlers.directory_iterator import DirectoryContextIterator
 from flie_handlers.sample_data import FileIOManager
 
 
@@ -162,7 +159,9 @@ class CommitVectorizer:
         hunks_count = 0
         try:
             for change in changes:
-                hunks_count += change.diff.decode("utf-8").count('@@')
+                if isinstance(change.diff, bytes):
+                    change.diff = change.diff.decode("utf-8")
+                hunks_count += change.diff.count('@@')
             return hunks_count
         except:
             return 0

@@ -1,23 +1,25 @@
+import concurrent.futures
 from datetime import datetime
 from typing import Callable
 
-from git import Commit, Repo
+from git import Commit
 from tqdm import tqdm
+
+from common import split_non_copy_iterator, split_iterator
+from laoders.loader import CommitModel
 
 
 class Sampler:
     def __init__(self,
-                 repo: Repo,
-                 time_fragment: tuple[datetime, datetime]| None = None,
+                 commit_list: list[CommitModel],
+                 time_fragment: tuple[datetime, datetime] | None = None,
                  commit_filter: Callable[[Commit], bool] | None = None,
-                 folder: str = "/",
                  max_len: int = 1000000,
-                 hash_list: list[str] | None = None
+                 commit_folder: str = "/"
                  ):
-        self._repo = repo
+        self._commit_list = commit_list
+
         self._result_list = None
-        if hash_list is not None:
-            self._result_list = [self._repo.commit(hash_commit) for hash_commit in hash_list]
 
         self._commit_filter = commit_filter
         if self._commit_filter is None:
@@ -26,27 +28,46 @@ class Sampler:
         self._time = time_fragment
         if self._time is None:
             self._time = (datetime.min, datetime.now())
-        self._folder = folder
         self._max_len = max_len
+        self._bar = None
+        self._commit_folder = commit_folder
 
-    def sample(self) -> list[Commit]:
+    def sample(self, hash_list: list[str] | None = None) -> list[CommitModel]:
+
+        if hash_list is not None:
+            commit_list_map = {commit.hash: commit for commit in self._commit_list}
+            self._result_list = [commit_list_map[hash_commit] for hash_commit in hash_list]
+
         if self._result_list is not None:
             return self._result_list
 
         self._result_list = []
-        with tqdm(total=self._max_len, desc='Form Sample') as pbar:
-            for commit in self._repo.iter_commits(paths=self._folder):
-                if self._is_commit_for_sample(commit):
-                    self._result_list.append(commit)
-                    pbar.update(1)
-                if len(self._result_list) >= self._max_len:
-                    break
+        commit_iters = split_iterator(iter(self._commit_list), 10)
+
+        self._bar = tqdm(total=self._max_len, desc='Form Sample')
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            list(executor.map(self._thread_sample, commit_iters))
+            executor.shutdown()
+        self._bar.close()
+
         return self._result_list
 
-    def _is_commit_for_sample(self, commit: Commit) -> bool:
-        return self._is_commit_in_time_interval(commit) and \
-            self._is_not_merge_commit(commit) and \
-            self._commit_filter(commit)
+    def _thread_sample(self, iterator):
+        for commit in iterator:
+            if self._is_commit_for_sample(commit):
+                self._result_list.append(commit)
+                self._bar.update(1)
+            if len(self._result_list) >= self._max_len:
+                return
+
+    def _is_commit_for_sample(self, commit: CommitModel) -> bool:
+        return (
+                self._is_not_merge_commit(commit)
+                and self._is_commit_in_time_interval(commit)
+                and self._is_in_file_commit
+                and self._commit_filter(commit)
+        )
 
     def _is_commit_in_time_interval(self, commit: Commit) -> bool:
         return self._time[0].date() < commit.committed_datetime.date() < self._time[1].date()
@@ -54,7 +75,14 @@ class Sampler:
     def _is_not_merge_commit(self, commit: Commit) -> bool:
         return len(commit.parents) == 1
 
-    def _mark_word_method(self, commit: Commit) -> bool:
+    def _is_in_file_commit(self, commit: CommitModel) -> bool:
+        changedFiles = [item.a_path for item in commit.parents[0].diff()]
+        for file in changedFiles:
+            if self._commit_filter in file:
+                return True
+        return False
+
+    def _mark_word_method(self, commit: CommitModel) -> bool:
         fix_marks = ['fix']
         for mark in fix_marks:
             if mark in commit.message.lower():

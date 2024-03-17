@@ -6,7 +6,6 @@ import numpy as np
 from git import Commit
 from nltk import WordNetLemmatizer
 from nltk.corpus import stopwords
-from sklearn.feature_extraction.text import CountVectorizer, ENGLISH_STOP_WORDS
 from tqdm import tqdm
 
 
@@ -16,16 +15,17 @@ class IDocumenter:
 
 
 class CommitTextDocumenter(IDocumenter):
-    def __init__(self, stop_words: list[str], pos_black_list: list[str] | None = None):
+    def __init__(self, stop_words: list[str] = (), pos_black_list: list[str] | None = None):
         self.stop_words = set(stop_words)
         self.pos_black_list = pos_black_list
+
     def docs(self, commits: list[Commit]) -> list[str]:
         messages = []
 
         for commit in tqdm(commits, desc='Commit Vectorize'):
             messages.append(
                 self._unit_to_token(
-                    self._get_message_info(commit.message.lower())
+                    self._get_message_info(commit.message)
                 )
             )
 
@@ -34,18 +34,34 @@ class CommitTextDocumenter(IDocumenter):
         documents = [document.translate(table) for document in documents]
         return documents
 
+    def _human_name_filter(self, tokens: list[str]) -> list[str]:
+        nltk_results = nltk.ne_chunk(nltk.pos_tag(tokens))
+        filtered_tokens = []
+        for nltk_result in nltk_results:
+            if not isinstance(nltk_result, nltk.tree.Tree):
+                filtered_tokens.append(nltk_result[0])
+
+        return filtered_tokens
+
+    def _web_filter(self, text: str) -> str:
+        result = re.sub('https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+|www\.(?:[-\w.]|(?:%[\da-fA-F]{2}))+', "", text)
+
+        return result
+
     def _unit_to_token(self, unit) -> list[str]:
         lemmatizer = WordNetLemmatizer()
-        raw_lemmas = [lemmatizer.lemmatize(token) for token in nltk.word_tokenize(unit)]
+        tokens = nltk.word_tokenize(unit)
+        tokens = self._human_name_filter(tokens)
+        raw_lemmas = [lemmatizer.lemmatize(token) for token in tokens]
         stop_words = set(stopwords.words('english')).union(self.stop_words)
-        raw_lemmas = [lemma for lemma in raw_lemmas if lemma not in stop_words]
+        raw_lemmas = [lemma.lower() for lemma in raw_lemmas if lemma not in stop_words]
         if not self.pos_black_list:
             return raw_lemmas
         pos_tags = nltk.pos_tag(raw_lemmas)
         chunks = nltk.ne_chunk(pos_tags)
 
         filtered_lemmas = np.array([word for word, pos in pos_tags if pos not in self.pos_black_list])
-        return filtered_lemmas # noqa
+        return filtered_lemmas  # noqa
 
     def _get_message_info(self, message):
         rows = message.split("\n")
@@ -57,4 +73,5 @@ class CommitTextDocumenter(IDocumenter):
             else:
                 break
         info = "\n".join(rows[:last_row_index + 1])
+        info = self._web_filter(info)
         return info
