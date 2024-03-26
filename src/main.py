@@ -7,7 +7,7 @@ from git import Repo
 
 from clusterizers.tree_clusterizer import TreeClusterizer, DBSCANClusterizer
 from documenters.comment_text_tokenizer import CommitTextDocumenter
-from flie_handlers.sample_data import FileIOManager
+from flie_handlers.file_io_manager import FileIOManager
 from laoders.loader import Loader
 from matrix_counter.lambda_matrix_counter import LambdaMatrixCounter, LambdaMatrixCounterTreading
 
@@ -19,11 +19,12 @@ from collections import Counter
 from config import DirectoryAnalysisData, FileNameConfig, MainConfig
 from scipy.spatial.distance import cosine
 
+from samplers.sampler import Sampler
 from vectorizers.tf_idf_vectorizer import TfIdfVectorizer
-from work_handler.main_handler import MainHandler
-from work_handler.paper_result_handler import PaperResultHandler
-from work_handler.result_handler import ResultHandler
-from work_handler.work_handler import WorkHandler
+from handlers.main_handler import MainHandler
+from handlers.paper_result_handler import PaperResultHandler
+from handlers.result_handler import ResultHandler
+from handlers.work_handler import WorkHandler
 from сommit_classifier import CommitVectorizer, CommitClassifier
 
 
@@ -62,6 +63,8 @@ def read_input_data_from_file(config: FileNameConfig, path: str):
 
 
 if __name__ == '__main__':
+
+
     with open("file_names.json") as json_config:
         file_names: FileNameConfig = FileNameConfig(**json.load(json_config))
 
@@ -69,17 +72,25 @@ if __name__ == '__main__':
         config: MainConfig = MainConfig(**json.load(json_config))
 
 
-
-
     file_io = FileIOManager()
+    repo = git.Repo(config.repo_path)
 
     l = Loader(lambda: git.Repo(config.repo_path))
     commits = file_io.subload(file_names.load_commits, lambda: l.load(1262627, 20))
+    filtr_method = get_filter_method(repo, file_io, config, file_names)
+
+    bugfix_sampler = Sampler(
+        commit_list=commits,
+        commit_filter=filtr_method
+    )
+
+    hashes = file_io.load_if_exist(file_names.bugfix_hashes)
+    bugfix_commit = bugfix_sampler.sample(hash_list=hashes)
+
 
 
     Config.set_library_path(config.clang_dll_path)
 
-    repo = git.Repo(config.repo_path)
 
     tasklist = [read_input_data_from_file(file_names, path) for path in os.listdir(file_names.input_path)]
 
@@ -108,13 +119,13 @@ if __name__ == '__main__':
         file_names=file_names
     )
 
-    filtr_method = get_filter_method(repo, file_io, config, file_names)
+
 
     mh = MainHandler(
         work_handler=wh,
         io_manager=file_io,
         file_names=file_names,
-        commit_filter=filtr_method
+        commit_filter=None
     )
 
     mh_r = MainHandler(
@@ -124,5 +135,5 @@ if __name__ == '__main__':
         commit_filter=None
     )
 
-    mh.handle(commits, tasklist)
-    mh_r.handle(commits, tasklist)
+    mh.handle(bugfix_commit, tasklist)
+    mh_r.handle(bugfix_commit, tasklist)

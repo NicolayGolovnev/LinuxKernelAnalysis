@@ -2,7 +2,7 @@ from numpy import ndarray
 
 from clusterizers.tree_clusterizer import IClusterizer
 from config import FileNameConfig
-from flie_handlers.sample_data import FileIOManager
+from flie_handlers.file_io_manager import FileIOManager
 from matrix_counter.lambda_matrix_counter import IMatrixGenerator
 from samplers.sampler import Sampler
 from documenters.comment_text_tokenizer import IDocumenter
@@ -29,12 +29,12 @@ class WorkHandler:
         sample_hash_list = self.file_io.load_if_exist(self.file_names.result_sample_path)
         sample = sample.sample(sample_hash_list)
         self.file_io.save(self.file_names.result_sample_path, [commit.hash for commit in sample])
-
         docs = self.file_io.subload(self.file_names.documents_path, lambda: self.documenter.docs(sample))
+        docs = docs[:len(docs)//2]
 
         vectors = self.file_io.load_if_exist(self.file_names.bow_vectors_path)
         dict = self.file_io.load_if_exist(self.file_names.dict_path)
-        if vectors is None or dict is None:
+        if vectors is None and dict is None:
             vectors, dict = self.vectorizer.vectorize(docs)
         self.file_io.save(self.file_names.bow_vectors_path, vectors)
         self.file_io.save(self.file_names.dict_path, dict)

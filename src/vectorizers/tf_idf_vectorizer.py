@@ -33,4 +33,4 @@ class TfIdfVectorizer(IVectorizer):
         bow_vectors = self.count_vectorizer.fit_transform(documents)
         self.dict = self.count_vectorizer.get_feature_names_out()
         idfs_vectors = self.tfidf_transformer.fit_transform(bow_vectors)
-        return idfs_vectors.toarray(), self.dict
+        return idfs_vectors, self.dict

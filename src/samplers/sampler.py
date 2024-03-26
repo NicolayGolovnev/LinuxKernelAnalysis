@@ -14,7 +14,7 @@ class Sampler:
                  commit_list: list[CommitModel],
                  time_fragment: tuple[datetime, datetime] | None = None,
                  commit_filter: Callable[[Commit], bool] | None = None,
-                 max_len: int = 1000000,
+                 max_len: int = 10_000_000,
                  commit_folder: str = "/"
                  ):
         self._commit_list = commit_list
@@ -23,7 +23,7 @@ class Sampler:
 
         self._commit_filter = commit_filter
         if self._commit_filter is None:
-            self._commit_filter = self._mark_word_method
+            self._commit_filter = lambda commit: True
 
         self._time = time_fragment
         if self._time is None:
@@ -65,7 +65,7 @@ class Sampler:
         return (
                 self._is_not_merge_commit(commit)
                 and self._is_commit_in_time_interval(commit)
-                and self._is_in_file_commit
+                and self._is_in_file_commit(commit)
                 and self._commit_filter(commit)
         )
 
@@ -76,15 +76,8 @@ class Sampler:
         return len(commit.parents) == 1
 
     def _is_in_file_commit(self, commit: CommitModel) -> bool:
-        changedFiles = [item.a_path for item in commit.parents[0].diff()]
+        changedFiles = [item.path for item in commit.parents[0].diff()]
         for file in changedFiles:
-            if self._commit_filter in file:
-                return True
-        return False
-
-    def _mark_word_method(self, commit: CommitModel) -> bool:
-        fix_marks = ['fix']
-        for mark in fix_marks:
-            if mark in commit.message.lower():
+            if self._commit_folder in file:
                 return True
         return False

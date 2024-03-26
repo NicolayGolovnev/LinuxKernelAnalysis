@@ -56,8 +56,11 @@ class Loader:
         for i, commit in enumerate(iter):
             self._bar.update(1)
             if self._is_not_merge_commit(commit):
-                commit_models = self._commit_to_loader(commit)
-                load_commits.append(commit_models)
+                try:
+                    commit_models = self._commit_to_loader(commit)
+                    load_commits.append(commit_models)
+                except:
+                    pass
             if i >= commit_count:
                 break
         return load_commits
@@ -69,7 +72,7 @@ class Loader:
         for changes in diff:
             changes_model = DiffIndexModel(
                 diff=changes.diff.decode("utf-8"),
-                path=changes.a_path
+                path=changes.a_path or changes.b_path
             )
             diff_list.append(changes_model)
 

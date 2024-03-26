@@ -23,14 +23,23 @@ class FileIOManager:
             if isinstance(data, ndarray):
                 np.save(path, data)
             elif isinstance(data, list) and isinstance(data[0], str):
-                np.savetxt(path, data, delimiter="\n", fmt="%s", encoding='utf-8')
+                with open(path, 'w') as f:
+                    for raw in data:
+                        try:
+                            f.writelines(raw + '\n')
+                        except:
+                            pass
             else:
                 with open(path, 'wb') as f:
                     pickle.dump(data, f)
 
     @staticmethod
     def _read_text(path: str) -> List[str]:
-        return list(np.genfromtxt(path, dtype=str, delimiter='\n', invalid_raise=False, encoding='utf-8'))
+        result = []
+        with open(path, 'r') as f:
+            for row in f:
+                result.append(row.rstrip())
+        return result
 
     @staticmethod
     def _read_npy(path: str) -> ndarray:

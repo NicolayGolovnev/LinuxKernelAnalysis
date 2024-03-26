@@ -7,7 +7,7 @@ import numpy as np
 from git import Repo, Commit
 from scipy.spatial.distance import cosine
 from config import FileNameConfig
-from flie_handlers.sample_data import FileIOManager
+from flie_handlers.file_io_manager import FileIOManager
 from samplers.sampler import Sampler
 
 
@@ -47,7 +47,7 @@ class NpEncoder(json.JSONEncoder):
             return obj.__dict__
         return super(NpEncoder, self).default(obj)
 
-class PaperResultHandler:
+class ResultHandler:
     def __init__(self,
                  repo: Repo,
                  file_io: FileIOManager,
@@ -58,6 +58,7 @@ class PaperResultHandler:
         self.file_names = file_names
 
     def handle(self, sample: Sampler):
+        #TODO Нужно поченить подгрузку семплера и перенести подгруз в него
         sample = self.file_io.load(self.file_names.result_sample_path)
         vectors = self.file_io.load(self.file_names.bow_vectors_path)
         hash_to_vectors = {hash_commit: vector for hash_commit, vector in zip(sample, vectors)}
@@ -67,9 +68,6 @@ class PaperResultHandler:
         labels = self.file_io.load(self.file_names.labels_path)
         labels_counter = Counter(labels)
         labels_id = sorted(list(set(labels)), key=lambda x: -labels_counter[x])
-        results = []
-
-
         for label_id in labels_id:
             if label_id >= 0:
                 commit_in_cluster = [commit for i, commit in enumerate(sample) if labels[i] == label_id]
@@ -104,16 +102,7 @@ class PaperResultHandler:
                     date_proportion=dates,
                     main_commit=commits,
                 )
-                results.append(result)
 
-        msg = ""
-        for result in results:
-            vector = [word.word for word in result.centroid][:15]
-            msg += f"Vector #{result.cluster_number}: {vector} \n"
-            for i in range(5):
-                msg += result.main_commit[i].text.split("\n\n")[0] + "\n"
-            msg += "\n\n"
-
-        with open("paper_result", "w") as file:
-            file.write(msg)
-
+                json_str = json.dumps(result, cls=NpEncoder, indent='\t', separators=(',', ': '))
+                with open(F"{label_id}.json", "w") as text_file:
+                    text_file.write(json_str)

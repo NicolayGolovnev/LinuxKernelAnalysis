@@ -4,10 +4,10 @@ from git import Repo
 
 from config import DirectoryAnalysisData, FileNameConfig
 from flie_handlers.directory_iterator import DirectoryContextIterator
+from handlers.result_handler import ResultHandler
+from handlers.work_handler import WorkHandler
 from laoders.loader import CommitModel
 from samplers.sampler import Sampler
-from work_handler.result_handler import ResultHandler
-from work_handler.work_handler import WorkHandler
 
 
 class MainHandler:

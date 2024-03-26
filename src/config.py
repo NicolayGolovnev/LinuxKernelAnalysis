@@ -26,6 +26,7 @@ class FileNameConfig:
     model_path: str
     documents_path: str
     load_commits: str
+    bugfix_hashes: str
 
 @dataclass
 class MainConfig:

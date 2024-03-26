@@ -9,7 +9,7 @@ from pulearn import ElkanotoPuClassifier
 from sklearn.svm import SVC
 
 from config import FileNameConfig, MainConfig
-from flie_handlers.sample_data import FileIOManager
+from flie_handlers.file_io_manager import FileIOManager
 
 
 class CommitClassifier:
@@ -27,7 +27,7 @@ class CommitClassifier:
 
     def _fit(self, bugfix_sample: np.ndarray[np.ndarray[int]], undefined_sample: np.ndarray[np.ndarray[int]]):
         X = np.concatenate((bugfix_sample, undefined_sample))
-        Y = np.concatenate((np.ones(len(bugfix_sample)), np.zeros(len(undefined_sample))))
+        Y = np.concatenate((np.ones(len(bugfix_sample)), np.array([-1] * len(undefined_sample))))
         self._classifier.fit(X, Y)
         return self._classifier
 

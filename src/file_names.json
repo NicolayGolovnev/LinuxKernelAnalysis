@@ -1,5 +1,6 @@
 {
   "load_commits" : "saves/load_commits.pickle",
+  "bugfix_hashes" : "saves/bugfix_hashes.txt",
   "input_path": "input",
   "result_path": "result",
   "white_path": "saves/white_commits.txt",
