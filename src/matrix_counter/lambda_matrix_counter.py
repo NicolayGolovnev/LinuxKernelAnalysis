@@ -41,7 +41,9 @@ class LambdaMatrixCounterTreading(IMatrixGenerator):
         self._data = None
 
     def create_matrix(self, data: np.ndarray[float]) -> np.array:
-        similarities = cosine_similarity(data)
+        similarities: np.ndarray = cosine_similarity(data)
+        np.fill_diagonal(similarities, 0)
+        return similarities
 
         size = data.shape[0]
         matrix_shape = size * (size - 1) // 2

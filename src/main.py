@@ -22,7 +22,6 @@ from scipy.spatial.distance import cosine
 from samplers.sampler import Sampler
 from vectorizers.tf_idf_vectorizer import TfIdfVectorizer
 from handlers.main_handler import MainHandler
-from handlers.paper_result_handler import PaperResultHandler
 from handlers.result_handler import ResultHandler
 from handlers.work_handler import WorkHandler
 from сommit_classifier import CommitVectorizer, CommitClassifier
@@ -88,12 +87,9 @@ if __name__ == '__main__':
     bugfix_commit = bugfix_sampler.sample(hash_list=hashes)
 
 
-
     Config.set_library_path(config.clang_dll_path)
 
-
     tasklist = [read_input_data_from_file(file_names, path) for path in os.listdir(file_names.input_path)]
-
 
     doc = CommitTextDocumenter(config.stop_words, config.POS_black_list)
     tf_idf = TfIdfVectorizer()
@@ -118,8 +114,6 @@ if __name__ == '__main__':
         file_io=file_io,
         file_names=file_names
     )
-
-
 
     mh = MainHandler(
         work_handler=wh,

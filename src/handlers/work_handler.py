@@ -30,7 +30,6 @@ class WorkHandler:
         sample = sample.sample(sample_hash_list)
         self.file_io.save(self.file_names.result_sample_path, [commit.hash for commit in sample])
         docs = self.file_io.subload(self.file_names.documents_path, lambda: self.documenter.docs(sample))
-        docs = docs[:len(docs)//2]
 
         vectors = self.file_io.load_if_exist(self.file_names.bow_vectors_path)
         dict = self.file_io.load_if_exist(self.file_names.dict_path)
@@ -44,4 +43,6 @@ class WorkHandler:
             lambda: self.matrix_counter.create_matrix(vectors)
         )
 
-        self.file_io.subload(self.file_names.labels_path, lambda: self.clasterizer.labels(matrix))
+        labels = self.file_io.subload(self.file_names.labels_path, lambda: self.clasterizer.labels(matrix))
+
+        a = 1

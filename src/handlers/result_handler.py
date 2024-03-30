@@ -71,7 +71,7 @@ class ResultHandler:
         for label_id in labels_id:
             if label_id >= 0:
                 commit_in_cluster = [commit for i, commit in enumerate(sample) if labels[i] == label_id]
-                vectors_in_cluster = [vector for i, vector in enumerate(vectors) if labels[i] == label_id]
+                vectors_in_cluster = [vector.toarray() for i, vector in enumerate(vectors) if labels[i] == label_id]
                 centroid = np.average(np.array(vectors_in_cluster), axis=0)
                 centroid_info = [WordWeight(dict[i], weight) for i, weight in enumerate(centroid) if weight > 0.2]
                 centroid_info = sorted(centroid_info, key=lambda x: -x.weight)

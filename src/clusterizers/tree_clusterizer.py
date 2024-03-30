@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import HDBSCAN
 
 
 class IClusterizer:
@@ -20,12 +20,15 @@ class TreeClusterizer(IClusterizer):
 
 class DBSCANClusterizer(IClusterizer):
     def __init__(self):
-        #self.treshold_finder = ThresholdFinder(Z, len(vectors), config.count_clusters_in_sample)
-        self.treshold = 0.65
+        self.treshold = 0.5
         self.min_count = 20
 
     def labels(self, matrix: np.array) -> np.ndarray[int]:
-        matrix = squareform(matrix)
-        dbscan = DBSCAN(self.treshold, min_samples=self.min_count, metric='precomputed')
+        dbscan = HDBSCAN(
+            min_cluster_size=self.min_count,
+            metric='precomputed',
+            n_jobs=1,
+            max_cluster_size=matrix.shape[0] // 10
+        )
         labels = dbscan.fit(matrix)
         return labels.labels_ # noqa
