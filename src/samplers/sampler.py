@@ -44,7 +44,7 @@ class Sampler:
         self._result_list = []
         commit_iters = split_iterator(iter(self._commit_list), 10)
 
-        self._bar = tqdm(total=self._max_len, desc='Form Sample')
+        self._bar = tqdm(total=min(self._max_len, len(self._commit_list)), desc='Form Sample')
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             list(executor.map(self._thread_sample, commit_iters))

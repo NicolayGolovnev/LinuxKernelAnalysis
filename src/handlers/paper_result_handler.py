@@ -73,9 +73,9 @@ class PaperResultHandler:
         for label_id in labels_id:
             if label_id >= 0:
                 commit_in_cluster = [commit for i, commit in enumerate(sample) if labels[i] == label_id]
-                vectors_in_cluster = [vector for i, vector in enumerate(vectors) if labels[i] == label_id]
-                centroid = np.average(np.array(vectors_in_cluster), axis=0)
-                centroid_info = [WordWeight(dict[i], weight) for i, weight in enumerate(centroid) if weight > 0.2]
+                vectors_in_cluster = [vector.toarray() for i, vector in enumerate(vectors) if labels[i] == label_id]
+                centroid = np.average(np.array(vectors_in_cluster), axis=0)[0]
+                centroid_info = [WordWeight(dict[i], weight) for i, weight in enumerate(centroid)]
                 centroid_info = sorted(centroid_info, key=lambda x: -x.weight)
 
                 commits: list[CommitDescription] = []
@@ -88,7 +88,7 @@ class PaperResultHandler:
                     commits.append(
                         CommitDescription(
                             commit_hash=commit_hash,
-                            distance_to_centroid=cosine(centroid, hash_to_vectors[commit_hash]),
+                            distance_to_centroid=cosine(centroid, hash_to_vectors[commit_hash].toarray()[0]),
                             github_url=f"https://github.com/torvalds/linux/commit/{commit_hash}",
                             text=comit_data.message,
                             date=str(comit_data.committed_datetime.date())
@@ -110,7 +110,7 @@ class PaperResultHandler:
         for result in results:
             vector = [word.word for word in result.centroid][:15]
             msg += f"Vector #{result.cluster_number}: {vector} \n"
-            for i in range(5):
+            for i in range(min(len(result.main_commit), 5)):
                 msg += result.main_commit[i].text.split("\n\n")[0] + "\n"
             msg += "\n\n"
 

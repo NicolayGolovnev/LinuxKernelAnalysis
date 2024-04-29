@@ -37,6 +37,11 @@ class Loader:
         self._bar = None
 
     def load(self, commit_count: int, count_thread: int = 1) -> list[CommitModel]:
+        def init_iterator_with_branch():
+            repo = self._repo_init()
+            repo.branches()
+
+
         self._bar = tqdm(total=commit_count, desc='Load Commit')
         iterators = split_non_copy_iterator(lambda: self._repo_init().iter_commits(), count_thread)
         arguments = zip(iterators, [commit_count // count_thread] * count_thread)

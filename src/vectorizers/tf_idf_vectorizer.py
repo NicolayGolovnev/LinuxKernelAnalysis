@@ -19,15 +19,10 @@ class TfIdfVectorizer(IVectorizer):
         self.stop_words = stop_words
 
         self.count_vectorizer = CountVectorizer(
-            min_df=min_df,
-            max_df=max_df,
-            stop_words=stop_words
+            min_df=min_df
         )
 
-        self.tfidf_transformer = TfidfTransformer(use_idf=True,
-                                                  norm=None,
-                                                  smooth_idf=False,
-                                                  sublinear_tf=False)
+        self.tfidf_transformer = TfidfTransformer()
 
     def vectorize(self, documents: list[str]) -> tuple[list[np.ndarray[float]], dict[int, str]]:
         bow_vectors = self.count_vectorizer.fit_transform(documents)

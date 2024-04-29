@@ -69,11 +69,11 @@ class ResultHandler:
         labels_counter = Counter(labels)
         labels_id = sorted(list(set(labels)), key=lambda x: -labels_counter[x])
         for label_id in labels_id:
-            if label_id >= 0:
+            if label_id >= 0 and len(labels[labels == label_id]) > 5:
                 commit_in_cluster = [commit for i, commit in enumerate(sample) if labels[i] == label_id]
                 vectors_in_cluster = [vector.toarray() for i, vector in enumerate(vectors) if labels[i] == label_id]
-                centroid = np.average(np.array(vectors_in_cluster), axis=0)
-                centroid_info = [WordWeight(dict[i], weight) for i, weight in enumerate(centroid) if weight > 0.2]
+                centroid = np.average(np.array(vectors_in_cluster), axis=0)[0]
+                centroid_info = [WordWeight(dict[i], weight) for i, weight in enumerate(centroid) if weight > 0.01]
                 centroid_info = sorted(centroid_info, key=lambda x: -x.weight)
 
                 commits: list[CommitDescription] = []
@@ -86,8 +86,8 @@ class ResultHandler:
                     commits.append(
                         CommitDescription(
                             commit_hash=commit_hash,
-                            distance_to_centroid=cosine(centroid, hash_to_vectors[commit_hash]),
-                            github_url=f"https://github.com/torvalds/linux/commit/{commit_hash}",
+                            distance_to_centroid=cosine(centroid, hash_to_vectors[commit_hash].toarray()[0]),
+                            github_url=f"https://github.com/ArduPilot/ardupilot/commit/{commit_hash}",
                             text=comit_data.message,
                             date=str(comit_data.committed_datetime.date())
                         )
@@ -97,7 +97,7 @@ class ResultHandler:
                 result = ResultData(
                     cluster_number=label_id,
                     cluster_size=len(commit_in_cluster),
-                    ratio=len(commit_in_cluster) / len(sample),
+                    ratio=round(len(commit_in_cluster) / len(sample), 2),
                     centroid=centroid_info,
                     date_proportion=dates,
                     main_commit=commits,

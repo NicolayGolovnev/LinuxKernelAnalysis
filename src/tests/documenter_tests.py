@@ -11,7 +11,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_name_filtering(self):
         commit = MockStaticFactory.get_commit(
-            "This is a sample text that contains the name Alex Smith who is one of the developers of this project."
+            ":This is a sample text that contains the name Alex Smith who is one of the developers of this project."
             "You can also find the surname Jones here.s")
 
         documenter = CommitTextDocumenter()

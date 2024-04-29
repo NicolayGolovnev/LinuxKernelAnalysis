@@ -5,7 +5,10 @@ from typing import Callable
 import numpy
 import numpy as np
 import tqdm.contrib.concurrent
+from sklearn.decomposition import TruncatedSVD
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import Normalizer
 from tqdm import tqdm
 
 from common import split_iterator
@@ -41,32 +44,9 @@ class LambdaMatrixCounterTreading(IMatrixGenerator):
         self._data = None
 
     def create_matrix(self, data: np.ndarray[float]) -> np.array:
+        lsa = make_pipeline(TruncatedSVD(n_components=100), Normalizer(copy=False))
+        data = lsa.fit_transform(data)
         similarities: np.ndarray = cosine_similarity(data)
+        similarities = similarities / 2 + 1
         np.fill_diagonal(similarities, 0)
         return similarities
-
-        size = data.shape[0]
-        matrix_shape = size * (size - 1) // 2
-        self._matrix = np.zeros(matrix_shape, dtype=np.float32)
-        self._bar = tqdm(total=matrix_shape, desc='Distance counting')
-        iterators = split_iterator(range(size), self.thread_count)
-        self._data = data
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.thread_count) as executor:
-            results = executor.map(self._part_count_matrix, iterators)
-            for _ in results:
-                pass
-            executor.shutdown()
-        return self._matrix
-
-    def _part_count_matrix(self, iterator):
-        size = self._data.shape[0]
-        for i in iterator:
-            for j in range(i + 1, size):
-                cur_distance = self._count_distance(self._data[i].toarray()[0], self._data[j].toarray()[0])
-                flat_index = i * size + j - (i + 1) * (i + 2) // 2
-                self._matrix[flat_index] = cur_distance
-                self._bar.update(1)
-
-
-

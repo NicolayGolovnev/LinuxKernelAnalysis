@@ -8,6 +8,7 @@ from git import Repo
 from clusterizers.tree_clusterizer import TreeClusterizer, DBSCANClusterizer
 from documenters.comment_text_tokenizer import CommitTextDocumenter
 from flie_handlers.file_io_manager import FileIOManager
+from handlers.paper_result_handler import PaperResultHandler
 from laoders.loader import Loader
 from matrix_counter.lambda_matrix_counter import LambdaMatrixCounter, LambdaMatrixCounterTreading
 
@@ -72,10 +73,13 @@ if __name__ == '__main__':
 
 
     file_io = FileIOManager()
+    Config.set_library_path(config.clang_dll_path)
+
+
     repo = git.Repo(config.repo_path)
 
     l = Loader(lambda: git.Repo(config.repo_path))
-    commits = file_io.subload(file_names.load_commits, lambda: l.load(1262627, 20))
+    commits = file_io.subload(file_names.load_commits, lambda: l.load(1262627, 10))
     filtr_method = get_filter_method(repo, file_io, config, file_names)
 
     bugfix_sampler = Sampler(
@@ -85,9 +89,8 @@ if __name__ == '__main__':
 
     hashes = file_io.load_if_exist(file_names.bugfix_hashes)
     bugfix_commit = bugfix_sampler.sample(hash_list=hashes)
+    file_io.save(data=[str(commit.hash) for commit in bugfix_commit], path=file_names.bugfix_hashes)
 
-
-    Config.set_library_path(config.clang_dll_path)
 
     tasklist = [read_input_data_from_file(file_names, path) for path in os.listdir(file_names.input_path)]
 
@@ -115,6 +118,12 @@ if __name__ == '__main__':
         file_names=file_names
     )
 
+    prh = PaperResultHandler(
+        repo=repo,
+        file_io=file_io,
+        file_names=file_names
+    )
+
     mh = MainHandler(
         work_handler=wh,
         io_manager=file_io,
@@ -129,5 +138,14 @@ if __name__ == '__main__':
         commit_filter=None
     )
 
+    mh_pr = MainHandler(
+        work_handler=prh,
+        io_manager=file_io,
+        file_names=file_names,
+        commit_filter=None
+    )
+
     mh.handle(bugfix_commit, tasklist)
     mh_r.handle(bugfix_commit, tasklist)
+    mh_pr.handle(bugfix_commit, tasklist)
+

@@ -4,7 +4,7 @@ import string
 import nltk
 import numpy as np
 from git import Commit
-from nltk import WordNetLemmatizer
+from nltk import WordNetLemmatizer, Tree
 from nltk.corpus import stopwords
 from tqdm import tqdm
 
@@ -40,6 +40,8 @@ class CommitTextDocumenter(IDocumenter):
         for nltk_result in nltk_results:
             if not isinstance(nltk_result, nltk.tree.Tree):
                 filtered_tokens.append(nltk_result[0])
+            elif nltk_result.label() != 'PERSON':
+                filtered_tokens.append(nltk_result[0][0])
 
         return filtered_tokens
 
@@ -57,21 +59,16 @@ class CommitTextDocumenter(IDocumenter):
         raw_lemmas = [lemma.lower() for lemma in raw_lemmas if lemma not in stop_words]
         if not self.pos_black_list:
             return raw_lemmas
-        pos_tags = nltk.pos_tag(raw_lemmas)
-        chunks = nltk.ne_chunk(pos_tags)
+
+
+        pos_tags = [nltk.pos_tag([lemma])[0] for lemma in raw_lemmas]
 
         filtered_lemmas = np.array([word for word, pos in pos_tags if pos not in self.pos_black_list])
         return filtered_lemmas  # noqa
 
     def _get_message_info(self, message):
-        rows = message.split("\n")
-        last_row_index = len(rows) - 1
-        while last_row_index != 0:
-            first_word_in_raw = rows[last_row_index].split(" ")[0]
-            if first_word_in_raw == "" or first_word_in_raw[-1] == ':':
-                last_row_index -= 1
-            else:
-                break
-        info = "\n".join(rows[:last_row_index + 1])
-        info = self._web_filter(info)
-        return info
+        info = message
+        words = info.split()
+        if "#" not in words:
+            return info
+        return " ".join(words[1:])

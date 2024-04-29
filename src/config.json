@@ -1,5 +1,5 @@
 {
-  "repo_path": "C:/linux/.git",
+  "repo_path": "D:\\luos_engine\\.git",
   "white_sample_len": 8000,
   "grey_sample_len": 8000,
   "white_sample_words": ["bugzilla"],
@@ -21,7 +21,13 @@
   "POS_black_list": [
     "CD",
     "RP",
-    "PRP"
+    "PRP",
+    "VB",
+    "VBG",
+    "VBD",
+    "VBN",
+    "VBP",
+    "VBZ"
   ],
   "stop_words": [
     "fix",
@@ -29,7 +35,6 @@
     "error",
     "mistake",
     "http",
-
     "eflags",
     "ff",
     "e8",
@@ -53,7 +58,22 @@
     "rdi",
     "r10",
     "fa",
-    "fe"
+    "fe",
+    "bug",
+    "fixed",
+    "fixup",
+    "typo",
+    "use",
+    "support",
+    "move",
+    "build",
+    "update",
+    "change",
+    "check",
+    "f9c3cf119bcb44bcf272b75c42450872",
+    "fixes",
+    "defines",
+    "define"
   ],
 
   "use_save_file": true,
