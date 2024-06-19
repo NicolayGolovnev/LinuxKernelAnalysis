@@ -67,9 +67,10 @@ class ResultHandler:
 
         labels = self.file_io.load(self.file_names.labels_path)
         labels_counter = Counter(labels)
+        
         labels_id = sorted(list(set(labels)), key=lambda x: -labels_counter[x])
         for label_id in labels_id:
-            if label_id >= 0 and len(labels[labels == label_id]) > 5:
+            if label_id >= 1:
                 commit_in_cluster = [commit for i, commit in enumerate(sample) if labels[i] == label_id]
                 vectors_in_cluster = [vector.toarray() for i, vector in enumerate(vectors) if labels[i] == label_id]
                 centroid = np.average(np.array(vectors_in_cluster), axis=0)[0]
@@ -87,7 +88,7 @@ class ResultHandler:
                         CommitDescription(
                             commit_hash=commit_hash,
                             distance_to_centroid=cosine(centroid, hash_to_vectors[commit_hash].toarray()[0]),
-                            github_url=f"https://github.com/ArduPilot/ardupilot/commit/{commit_hash}",
+                            github_url=f"https://github.com/torvalds/linux/commit/{commit_hash}",
                             text=comit_data.message,
                             date=str(comit_data.committed_datetime.date())
                         )
@@ -97,7 +98,7 @@ class ResultHandler:
                 result = ResultData(
                     cluster_number=label_id,
                     cluster_size=len(commit_in_cluster),
-                    ratio=round(len(commit_in_cluster) / len(sample), 2),
+                    ratio=round(len(commit_in_cluster) / len(sample), 8),
                     centroid=centroid_info,
                     date_proportion=dates,
                     main_commit=commits,

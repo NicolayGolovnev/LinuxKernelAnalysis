@@ -56,11 +56,7 @@ class CommitTextDocumenter(IDocumenter):
         tokens = self._human_name_filter(tokens)
         raw_lemmas = [lemmatizer.lemmatize(token) for token in tokens]
         stop_words = set(stopwords.words('english')).union(self.stop_words)
-        raw_lemmas = [lemma.lower() for lemma in raw_lemmas if lemma not in stop_words]
-        if not self.pos_black_list:
-            return raw_lemmas
-
-
+        raw_lemmas = [lemma.lower() for lemma in raw_lemmas if lemma.lower() not in stop_words]
         pos_tags = [nltk.pos_tag([lemma])[0] for lemma in raw_lemmas]
 
         filtered_lemmas = np.array([word for word, pos in pos_tags if pos not in self.pos_black_list])

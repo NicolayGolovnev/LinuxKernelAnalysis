@@ -19,21 +19,11 @@ class TreeClusterizer(IClusterizer):
         return labels # noqa
 
 class DBSCANClusterizer(IClusterizer):
-    def __init__(self):
-        self.treshold = 0.9
-        self.min_count = 5
+    def __init__(self, treshold=0.45, min_count=20):
+        self.treshold = treshold
+        self.min_count = 20
 
     def labels(self, matrix: np.array) -> np.ndarray[int]:
-        dbscan = DBSCAN(
-            eps=self.treshold,
-            min_samples=self.min_count,
-            metric='precomputed',
-        )
-        #dbscan = HDBSCAN(
-        #    min_cluster_size=self.min_count,
-        #    metric='precomputed',
-        #    n_jobs=1,
-        #)
+        dbscan = DBSCAN(eps=self.treshold, min_samples=self.min_count, metric='cosine')
         labels = dbscan.fit(matrix)
-
         return labels.labels_ # noqa

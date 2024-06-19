@@ -71,9 +71,9 @@ if __name__ == '__main__':
     with open("config.json") as json_config:
         config: MainConfig = MainConfig(**json.load(json_config))
 
+    Config.set_library_path(config.clang_dll_path)
 
     file_io = FileIOManager()
-    Config.set_library_path(config.clang_dll_path)
 
 
     repo = git.Repo(config.repo_path)
@@ -147,5 +147,4 @@ if __name__ == '__main__':
 
     mh.handle(bugfix_commit, tasklist)
     mh_r.handle(bugfix_commit, tasklist)
-    mh_pr.handle(bugfix_commit, tasklist)
 

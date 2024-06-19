@@ -2,17 +2,12 @@ import concurrent.futures
 import itertools
 from typing import Callable
 
-import numpy
 import numpy as np
 import tqdm.contrib.concurrent
 from sklearn.decomposition import TruncatedSVD
-from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
 from tqdm import tqdm
-
-from common import split_iterator
-
 
 class IMatrixGenerator:
     def create_matrix(self, vectors: list[np.ndarray[float]]) -> np.array:
@@ -44,9 +39,9 @@ class LambdaMatrixCounterTreading(IMatrixGenerator):
         self._data = None
 
     def create_matrix(self, data: np.ndarray[float]) -> np.array:
-        lsa = make_pipeline(TruncatedSVD(n_components=100), Normalizer(copy=False))
+        lsa = make_pipeline(TruncatedSVD(n_components=1000), Normalizer(copy=False))
         data = lsa.fit_transform(data)
-        similarities: np.ndarray = cosine_similarity(data)
-        similarities = similarities / 2 + 1
-        np.fill_diagonal(similarities, 0)
-        return similarities
+        print("start converting")
+        data = np.float32(data)
+        print("stop converting")
+        return data
