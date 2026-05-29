@@ -1,0 +1,5 @@
+{
+  "name": "crypto",
+  "path": "crypto/",
+  "max_commit": 10000000
+}

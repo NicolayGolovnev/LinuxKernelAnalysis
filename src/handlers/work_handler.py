@@ -27,16 +27,16 @@ class WorkHandler:
 
     def handle(self, sample: Sampler):
         sample_hash_list = self.file_io.load_if_exist(self.file_names.result_sample_path)
-        sample = sample.sample(sample_hash_list)
-        self.file_io.save(self.file_names.result_sample_path, [commit.hash for commit in sample])
-        docs = self.file_io.subload(self.file_names.documents_path, lambda: self.documenter.docs(sample))
+        commit_list = sample.sample(sample_hash_list)
+        self.file_io.save(self.file_names.result_sample_path, [commit.hash for commit in commit_list])
+        docs = self.file_io.subload(self.file_names.documents_path, lambda: self.documenter.docs(commit_list))
 
         vectors = self.file_io.load_if_exist(self.file_names.bow_vectors_path)
         dict = self.file_io.load_if_exist(self.file_names.dict_path)
         if vectors is None and dict is None:
             vectors, dict = self.vectorizer.vectorize(docs)
-        self.file_io.save(self.file_names.bow_vectors_path, vectors)
-        self.file_io.save(self.file_names.dict_path, dict)
+            self.file_io.save(self.file_names.bow_vectors_path, vectors)
+            self.file_io.save(self.file_names.dict_path, dict)
 
         matrix = self.file_io.subload(
             self.file_names.matrix_length_path,
@@ -45,4 +45,4 @@ class WorkHandler:
 
         labels = self.file_io.subload(self.file_names.labels_path, lambda: self.clasterizer.labels(matrix))
 
-        a = 1
+        # a = 1

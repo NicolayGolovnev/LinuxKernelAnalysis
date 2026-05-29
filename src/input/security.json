@@ -1,0 +1,5 @@
+{
+  "name": "security",
+  "path": "security/",
+  "max_commit": 10000000
+}

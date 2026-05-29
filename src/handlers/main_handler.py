@@ -27,6 +27,7 @@ class MainHandler:
         directory_paths = [task.name for task in task_list]
         context_iterator = DirectoryContextIterator(directory_paths, self.file_names.result_path).get_iterator()
         for context, task in zip(context_iterator, task_list):
+            print(f"\n\nCurrent context: {context}\n")
             result_sample = Sampler(
                 commit_list=commit_list,
                 max_len=task.max_commit,

@@ -17,10 +17,13 @@ class DirectoryContextIterator:
 
     def _back_dir(self) -> None:
         os.chdir(self._root_dir)
+        # print(f"Back dir: {self._root_dir}\n")
 
     def _set_dir(self, name: str) -> None:
         current_folder = f"{self.result_path}/{name}"
         if not os.path.exists(current_folder):
             os.mkdir(current_folder)
         os.chdir(current_folder)
+        # print(f"Current dir: {current_folder}")
+        # print(f"Os curr dir: {os.curdir}")
 

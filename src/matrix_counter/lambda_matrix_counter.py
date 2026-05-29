@@ -39,9 +39,11 @@ class LambdaMatrixCounterTreading(IMatrixGenerator):
         self._data = None
 
     def create_matrix(self, data: np.ndarray[float]) -> np.array:
-        lsa = make_pipeline(TruncatedSVD(n_components=1000), Normalizer(copy=False))
+        # TODO В библиотеке написано, что 100 - это рекомендация. Посмотреть, как повлияет
+        #  Сделать динамическое формирование - число компонент
+        lsa = make_pipeline(TruncatedSVD(n_components=min(1000, data.shape[1])), Normalizer(copy=False))
         data = lsa.fit_transform(data)
-        print("start converting")
+        # print("start converting")
         data = np.float32(data)
-        print("stop converting")
+        # print("stop converting")
         return data

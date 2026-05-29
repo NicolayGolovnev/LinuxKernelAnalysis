@@ -108,12 +108,14 @@ class PaperResultHandler:
 
         msg = ""
         for result in results:
+            # TODO число слов в центроиде вектора
             vector = [word.word for word in result.centroid][:15]
             msg += f"Vector #{result.cluster_number}: {vector} \n"
-            for i in range(min(len(result.main_commit), 5)):
+            # TODO число коммитов в результирующем векторе - было 5
+            for i in range(min(len(result.main_commit), 10)):
                 msg += result.main_commit[i].text.split("\n\n")[0] + "\n"
             msg += "\n\n"
 
-        with open("paper_result", "w") as file:
+        with open("paper_result.txt", "w", encoding="utf-8") as file:
             file.write(msg)
 

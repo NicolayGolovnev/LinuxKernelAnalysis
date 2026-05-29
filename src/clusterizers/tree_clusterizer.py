@@ -21,7 +21,7 @@ class TreeClusterizer(IClusterizer):
 class DBSCANClusterizer(IClusterizer):
     def __init__(self, treshold=0.45, min_count=20):
         self.treshold = treshold
-        self.min_count = 20
+        self.min_count = min_count
 
     def labels(self, matrix: np.array) -> np.ndarray[int]:
         dbscan = DBSCAN(eps=self.treshold, min_samples=self.min_count, metric='cosine')

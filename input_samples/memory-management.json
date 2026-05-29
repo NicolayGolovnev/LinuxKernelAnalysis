@@ -1,0 +1,5 @@
+{
+  "name": "memory-management",
+  "path": "mm/",
+  "max_commit": 10000000
+}

@@ -57,7 +57,9 @@ class Sampler:
         for commit in iterator:
             if self._is_commit_for_sample(commit):
                 self._result_list.append(commit)
-                self._bar.update(1)
+
+            self._bar.update(1)
+            
             if len(self._result_list) >= self._max_len:
                 return
 

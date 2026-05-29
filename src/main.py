@@ -2,6 +2,7 @@ import os
 from typing import List, Callable
 
 import clang
+import nltk
 from clang.cindex import Config
 from git import Repo
 
@@ -64,7 +65,6 @@ def read_input_data_from_file(config: FileNameConfig, path: str):
 
 if __name__ == '__main__':
 
-
     with open("file_names.json") as json_config:
         file_names: FileNameConfig = FileNameConfig(**json.load(json_config))
 
@@ -75,11 +75,15 @@ if __name__ == '__main__':
 
     file_io = FileIOManager()
 
-
     repo = git.Repo(config.repo_path)
 
     l = Loader(lambda: git.Repo(config.repo_path))
-    commits = file_io.subload(file_names.load_commits, lambda: l.load(1262627, 10))
+    # TODO Перенести эти параметры в конфиг (ВОЗМОЖНО число ядер на основе ОС выбирать)
+    # 1312227 коммитов на 18 ноября, за год - 62841
+    # 2 года - 139967
+    # 3 года - 250155
+    # 5 лет  - 403696
+    commits = file_io.subload(file_names.load_commits, lambda: l.load(139967, 8))
     filtr_method = get_filter_method(repo, file_io, config, file_names)
 
     bugfix_sampler = Sampler(
@@ -97,10 +101,10 @@ if __name__ == '__main__':
     doc = CommitTextDocumenter(config.stop_words, config.POS_black_list)
     tf_idf = TfIdfVectorizer()
 
-    cos_matrix = LambdaMatrixCounter(cosine)
+    # cos_matrix = LambdaMatrixCounter(cosine)
     thread_cos_matrix = LambdaMatrixCounterTreading(cosine, 4)
 
-    clusterizer = TreeClusterizer()
+    # clusterizer = TreeClusterizer()
     dbsan_clusterizer = DBSCANClusterizer()
 
     wh = WorkHandler(
@@ -147,4 +151,5 @@ if __name__ == '__main__':
 
     mh.handle(bugfix_commit, tasklist)
     mh_r.handle(bugfix_commit, tasklist)
+    mh_pr.handle(bugfix_commit, tasklist)
 

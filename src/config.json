@@ -1,5 +1,5 @@
 {
-  "repo_path": "D:\\luos_engine\\.git",
+  "repo_path": "X:\\Git\\linux\\.git",
   "white_sample_len": 8000,
   "grey_sample_len": 8000,
   "white_sample_words": ["bugzilla"],
@@ -17,7 +17,10 @@
     "bug",
     "error",
     "vulnerability",
-    "issue"],
+    "issue"
+  ],
+  "spelling_words": [
+  ],
   "POS_black_list": [
     "CD",
     "RP",
@@ -144,9 +147,7 @@
 
   "use_save_file": true,
   "override_file": false,
-  "clang_dll_path": "D:/LLVM/bin",
-  "spelling_words": [
-  ],
+  "clang_dll_path": "E:/LLVM/bin",
 
   "count_clusters_in_sample": 16,
   "accuracity_treshold": 1000

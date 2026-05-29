@@ -78,9 +78,8 @@ class CommitVectorizer:
         else:
             white_vectors = np.vstack(list(map(lambda x: self.get_vector_from_hash(repo, x), bugfix_sample)))
             gray_vectors = np.vstack(list(map(lambda x: self.get_vector_from_hash(repo, x), undefined_sample)))
-
-        self.io.save(self.name_config.white_vectors_path, white_vectors)
-        self.io.save(self.name_config.gray_vectors_path, gray_vectors)
+            self.io.save(self.name_config.white_vectors_path, white_vectors)
+            self.io.save(self.name_config.gray_vectors_path, gray_vectors)
 
         return white_vectors, gray_vectors
 

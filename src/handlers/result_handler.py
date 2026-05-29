@@ -67,10 +67,11 @@ class ResultHandler:
 
         labels = self.file_io.load(self.file_names.labels_path)
         labels_counter = Counter(labels)
+        # print(labels_counter)
         
         labels_id = sorted(list(set(labels)), key=lambda x: -labels_counter[x])
         for label_id in labels_id:
-            if label_id >= 1:
+            if label_id >= 0:
                 commit_in_cluster = [commit for i, commit in enumerate(sample) if labels[i] == label_id]
                 vectors_in_cluster = [vector.toarray() for i, vector in enumerate(vectors) if labels[i] == label_id]
                 centroid = np.average(np.array(vectors_in_cluster), axis=0)[0]

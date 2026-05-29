@@ -1,0 +1,5 @@
+{
+  "name": "block",
+  "path": "block/",
+  "max_commit": 10000000
+}

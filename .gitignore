@@ -1,3 +1,9 @@
+.idea/**
+src/saves/**
+src/result/**
+opencode.json
+todoist.txt
+
 ### Java template
 # Compiled class file
 *.class

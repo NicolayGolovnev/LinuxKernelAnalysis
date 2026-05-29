@@ -6,11 +6,14 @@ import numpy as np
 from git import Commit
 from nltk import WordNetLemmatizer, Tree
 from nltk.corpus import stopwords
+from sklearn.utils import deprecated
 from tqdm import tqdm
+
+from laoders.loader import CommitModel
 
 
 class IDocumenter:
-    def docs(self, commits: list[Commit]) -> list[str]:
+    def docs(self, commits: list[CommitModel]) -> list[str]:
         ...
 
 
@@ -19,7 +22,7 @@ class CommitTextDocumenter(IDocumenter):
         self.stop_words = set(stop_words)
         self.pos_black_list = pos_black_list
 
-    def docs(self, commits: list[Commit]) -> list[str]:
+    def docs(self, commits: list[CommitModel]) -> list[str]:
         messages = []
 
         for commit in tqdm(commits, desc='Commit Vectorize'):
@@ -45,6 +48,7 @@ class CommitTextDocumenter(IDocumenter):
 
         return filtered_tokens
 
+    @deprecated
     def _web_filter(self, text: str) -> str:
         result = re.sub('https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+|www\.(?:[-\w.]|(?:%[\da-fA-F]{2}))+', "", text)
 
@@ -64,6 +68,13 @@ class CommitTextDocumenter(IDocumenter):
 
     def _get_message_info(self, message):
         info = message
+        # Чистим сообщение от лишнего мусора (отправка из почты)
+        trashes = ["Link:", "Signed-off-by:", "Cc:", "Reviewed-by:", "Co-developed-by:"]
+        for trash_msg in trashes:
+            index = info.find(trash_msg)
+            if index != -1:
+                info = info[:index]
+
         words = info.split()
         if "#" not in words:
             return info

@@ -1,0 +1,5 @@
+{
+  "name": "drivers",
+  "path": "drivers/",
+  "max_commit": 10000000
+}
