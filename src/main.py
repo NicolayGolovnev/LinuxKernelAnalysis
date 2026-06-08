@@ -6,7 +6,7 @@ import nltk
 from clang.cindex import Config
 from git import Repo
 
-from clusterizers.tree_clusterizer import TreeClusterizer, DBSCANClusterizer
+from clusterizers.tree_clusterizer import TreeClusterizer, DBSCANClusterizer, HDBSCANClusterizer
 from documenters.comment_text_tokenizer import CommitTextDocumenter
 from flie_handlers.file_io_manager import FileIOManager
 from handlers.paper_result_handler import PaperResultHandler
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     # 2 года - 139967
     # 3 года - 250155
     # 5 лет  - 403696
-    commits = file_io.subload(file_names.load_commits, lambda: l.load(139967, 8))
+    commits = file_io.subload(file_names.load_commits, lambda: l.load(62841, 8))
     filtr_method = get_filter_method(repo, file_io, config, file_names)
 
     bugfix_sampler = Sampler(
@@ -102,16 +102,26 @@ if __name__ == '__main__':
     tf_idf = TfIdfVectorizer()
 
     # cos_matrix = LambdaMatrixCounter(cosine)
-    thread_cos_matrix = LambdaMatrixCounterTreading(cosine, 4)
+    thread_cos_matrix = LambdaMatrixCounterTreading(cosine, 4, config.lsa_n_components)
 
-    # clusterizer = TreeClusterizer()
-    dbsan_clusterizer = DBSCANClusterizer()
+    if config.cluster_algorithm == "hdbscan":
+        clusterizer = HDBSCANClusterizer(
+            min_cluster_size=config.cluster_min_cluster_size,
+            min_samples=config.cluster_min_samples,
+            cluster_selection_method=config.cluster_selection_method,
+            cluster_selection_epsilon=config.cluster_selection_epsilon
+        )
+    else:
+        clusterizer = DBSCANClusterizer(
+            treshold=config.cluster_eps,
+            min_count=config.cluster_min_samples
+        )
 
     wh = WorkHandler(
         documenter=doc,
         vectorizer=tf_idf,
         matrix_counter=thread_cos_matrix,
-        clasterizer=dbsan_clusterizer,
+        clasterizer=clusterizer,
         file_io=file_io,
         file_names=file_names
     )

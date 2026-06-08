@@ -53,4 +53,14 @@ class MainConfig:
     count_clusters_in_sample: int
     accuracity_treshold: int
 
+    # LSA
+    lsa_n_components: int
+
+    # clustering algorithm
+    cluster_algorithm: str  # "dbscan" or "hdbscan"
+    cluster_min_samples: int
+    cluster_min_cluster_size: int
+    cluster_eps: float
+    cluster_selection_method: str  # "eom" or "leaf"
+    cluster_selection_epsilon: float
 

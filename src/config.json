@@ -150,5 +150,13 @@
   "clang_dll_path": "E:/LLVM/bin",
 
   "count_clusters_in_sample": 16,
-  "accuracity_treshold": 1000
+  "accuracity_treshold": 1000,
+
+  "lsa_n_components": 200,
+  "cluster_algorithm": "hdbscan",
+  "cluster_min_samples": 5,
+  "cluster_min_cluster_size": 10,
+  "cluster_eps": 0.45,
+  "cluster_selection_method": "eom",
+  "cluster_selection_epsilon": 0.4
 }

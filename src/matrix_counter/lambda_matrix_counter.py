@@ -31,9 +31,10 @@ class LambdaMatrixCounter(IMatrixGenerator):
 
 
 class LambdaMatrixCounterTreading(IMatrixGenerator):
-    def __init__(self, distance_method: Callable[[np.ndarray, np.ndarray], float], thread_count: int = 1):
+    def __init__(self, distance_method: Callable[[np.ndarray, np.ndarray], float], thread_count: int = 1, n_components: int = 200):
         self._count_distance = distance_method
         self.thread_count = thread_count
+        self.n_components = n_components
         self._matrix = None
         self._bar = None
         self._data = None
@@ -41,7 +42,8 @@ class LambdaMatrixCounterTreading(IMatrixGenerator):
     def create_matrix(self, data: np.ndarray[float]) -> np.array:
         # TODO В библиотеке написано, что 100 - это рекомендация. Посмотреть, как повлияет
         #  Сделать динамическое формирование - число компонент
-        lsa = make_pipeline(TruncatedSVD(n_components=min(1000, data.shape[1])), Normalizer(copy=False))
+        n_comp = min(self.n_components, data.shape[1], max(data.shape[0] // 5, 2))
+        lsa = make_pipeline(TruncatedSVD(n_components=n_comp), Normalizer(copy=False))
         data = lsa.fit_transform(data)
         # print("start converting")
         data = np.float32(data)
